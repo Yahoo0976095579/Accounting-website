@@ -1,6 +1,7 @@
 # 💸 記帳網站 (Accounting Web App)
 
 一個功能豐富、支援個人與群組的記帳 Web 應用程式，幫助使用者輕鬆追蹤與分析收支。具備多條件篩選、分頁、類別管理、群組協作、即時通知、響應式設計與現代化 UI/UX。
+(最下方有預覽圖片)
 
 ---
 
@@ -21,40 +22,7 @@
 
 ---
 
-## 登入與註冊
-
-![畫面預覽](./ReadMeImg/登入.png)
-![畫面預覽](./ReadMeImg/註冊.png)
-
-## 首頁
-
-![畫面預覽](./ReadMeImg/首頁.png)
-![畫面預覽(響應式)](./ReadMeImg/響應式設計首頁.png)
-
-## 交易紀錄
-
-![畫面預覽](./ReadMeImg/交易紀錄.png)
-![畫面預覽(響應式)](./ReadMeImg/響應式交易紀錄.png)
-
-## 類別管理
-
-![畫面預覽](./ReadMeImg/類別管理.png)
-![畫面預覽(響應式)](./ReadMeImg/響應式類別管理.png)
-
-## 群組記帳
-
-![畫面預覽](./ReadMeImg/群組記帳.png)
-![畫面預覽(響應式)](./ReadMeImg/響應式群組記帳.png)
-
-## 群組記帳內部
-
-![畫面預覽](./ReadMeImg/群組記帳內部.png)
-![畫面預覽(響應式)](./ReadMeImg/響應式群組記帳內部.png)
-
-## 設定
-
-![畫面預覽](./ReadMeImg/設定.png)
-![畫面預覽(響應式)](./ReadMeImg/響應式設定.png)
+#
 
 ## ⚙️ 安裝與啟動
 
@@ -201,3 +169,40 @@ Authorization: Bearer <token>
 ## 📜 授權條款
 
 本專案採用 MIT 授權條款。
+
+## 預覽圖片
+
+# 登入與註冊
+
+![畫面預覽](./ReadMeImg/登入.png)
+![畫面預覽](./ReadMeImg/註冊.png)
+
+## 首頁
+
+![畫面預覽](./ReadMeImg/首頁.png)
+![畫面預覽(響應式)](./ReadMeImg/響應式設計首頁.png)
+
+## 交易紀錄
+
+![畫面預覽](./ReadMeImg/交易紀錄.png)
+![畫面預覽(響應式)](./ReadMeImg/響應式交易紀錄.png)
+
+## 類別管理
+
+![畫面預覽](./ReadMeImg/類別管理.png)
+![畫面預覽(響應式)](./ReadMeImg/響應式類別管理.png)
+
+## 群組記帳
+
+![畫面預覽](./ReadMeImg/群組記帳.png)
+![畫面預覽(響應式)](./ReadMeImg/響應式群組記帳.png)
+
+## 群組記帳內部
+
+![畫面預覽](./ReadMeImg/群組記帳內部.png)
+![畫面預覽(響應式)](./ReadMeImg/響應式群組記帳內部.png)
+
+## 設定
+
+![畫面預覽](./ReadMeImg/設定.png)
+![畫面預覽(響應式)](./ReadMeImg/響應式設定.png)
