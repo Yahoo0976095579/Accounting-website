@@ -10,6 +10,7 @@ export const useSummaryStore = defineStore("summary", {
     totalExpense: 0,
     balance: 0,
     categoryBreakdown: [],
+    incomeCategoryBreakdown: [], // 新增這行
     trendData: [],
     isLoading: false,
     fetchError: null,
@@ -26,13 +27,13 @@ export const useSummaryStore = defineStore("summary", {
       try {
         // 並行發送所有請求
         await Promise.all([
-          // 這裡直接呼叫 actions 內部的 fetch 方法，確保它們是有效的
-          this.fetchOverallSummaryInternal(), // 確保你有這個內部方法或直接調用 api
+          this.fetchOverallSummaryInternal(),
           this.fetchTrendDataInternal(chartFilters),
           this.fetchCategoryBreakdownInternal({
             type: "expense",
             ...chartFilters,
           }),
+          this.fetchIncomeCategoryBreakdownInternal(chartFilters), // 新增這行
         ]);
         this.isDataReady = true;
       } catch (err) {
@@ -78,6 +79,17 @@ export const useSummaryStore = defineStore("summary", {
           withCredentials: true,
         });
         this.trendData = response.data;
+      } catch (err) {
+        throw err;
+      }
+    },
+    async fetchIncomeCategoryBreakdownInternal(filters) {
+      try {
+        const response = await axios.get(
+          `${API_BASE_URL}/summary/category_breakdown`,
+          { params: { ...filters, type: "income" }, withCredentials: true }
+        );
+        this.incomeCategoryBreakdown = response.data;
       } catch (err) {
         throw err;
       }

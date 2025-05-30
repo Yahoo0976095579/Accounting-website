@@ -2,6 +2,7 @@
 import { defineStore } from "pinia";
 import axios from "axios";
 import router from "../router/index.js"; // 導入 router，用於登入後重定向
+import { useNotificationStore } from "./notificationStore"; // 根據你的 notificationStore 實際路徑
 
 const API_BASE_URL = "http://localhost:5000/api"; // 後端 API 基礎 URL
 
@@ -119,6 +120,57 @@ export const useAuthStore = defineStore("auth", {
         localStorage.removeItem("user");
         localStorage.removeItem("isLoggedIn"); // 確保這個也被移除
         return false;
+      } finally {
+        this.isLoading = false;
+      }
+    },
+    async updateUsername(newUsername) {
+      this.isLoading = true;
+      this.error = null;
+      try {
+        const response = await axios.put(
+          `${API_BASE_URL}/user/username`,
+          { new_username: newUsername },
+          {
+            withCredentials: true,
+          }
+        );
+        this.user = response.data.user; // 更新本地 user 狀態
+        localStorage.setItem("user", JSON.stringify(this.user)); // 更新 localStorage
+        useNotificationStore().showNotification(
+          "使用者名稱更新成功！",
+          "success"
+        );
+        return { success: true };
+      } catch (err) {
+        this.error = err.response?.data?.error || "更新使用者名稱失敗。";
+        useNotificationStore().showNotification(this.error, "error");
+        console.error("Update username error:", err);
+        return { success: false, error: this.error };
+      } finally {
+        this.isLoading = false;
+      }
+    },
+
+    async updatePassword(oldPassword, newPassword) {
+      this.isLoading = true;
+      this.error = null;
+      try {
+        const response = await axios.put(
+          `${API_BASE_URL}/user/password`,
+          { old_password: oldPassword, new_password: newPassword },
+          {
+            withCredentials: true,
+          }
+        );
+        // 密碼更新成功後，不返回 user 信息，只顯示通知
+        useNotificationStore().showNotification("密碼更新成功！", "success");
+        return { success: true };
+      } catch (err) {
+        this.error = err.response?.data?.error || "更新密碼失敗。";
+        useNotificationStore().showNotification(this.error, "error");
+        console.error("Update password error:", err);
+        return { success: false, error: this.error };
       } finally {
         this.isLoading = false;
       }

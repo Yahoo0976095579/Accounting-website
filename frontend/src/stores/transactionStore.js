@@ -14,6 +14,9 @@ export const useTransactionStore = defineStore("transaction", {
     isLoading: false,
     error: null,
     currentFilters: {}, // 確保這裡有一個 currentFilters 狀態用於存儲篩選條件
+    has_next: false, // <--- 新增
+    has_prev: false, // <--- 新增
+    summary: { income: 0, expense: 0, balance: 0 }, // <--- 新增這行
   }),
   actions: {
     /**
@@ -46,6 +49,8 @@ export const useTransactionStore = defineStore("transaction", {
         this.currentPage = response.data.page;
         // 在這裡更新 currentFilters，因為 fetchTransactions 可能會被外部調用
         this.currentFilters = filters; // 更新篩選條件
+        this.has_next = response.data.has_next; // <--- 新增
+        this.has_prev = response.data.has_prev; // <--- 新增
       } catch (err) {
         this.error =
           err.response?.data?.error || "Failed to fetch transactions.";
@@ -164,6 +169,13 @@ export const useTransactionStore = defineStore("transaction", {
     // 注意：這個方法現在在 fetchTransactions 內部自動調用，確保 currentFilters 總是最新
     setCurrentFilters(filters) {
       this.currentFilters = filters;
+    },
+    async fetchSummary(filters) {
+      const res = await axios.get(`${API_BASE_URL}/transactions/summary`, {
+        params: filters,
+        withCredentials: true,
+      });
+      this.summary = res.data;
     },
   },
 });
