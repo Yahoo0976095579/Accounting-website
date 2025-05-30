@@ -60,6 +60,11 @@
               class="router-link-item text-white hover:text-blue-200 py-1 px-2 rounded hover:bg-blue-700 transition duration-300"
               >類別管理</router-link
             >
+            <router-link
+              to="/groups"
+              class="router-link-item text-white hover:text-blue-200 py-1 px-2 rounded hover:bg-blue-700 transition duration-300"
+              >我的群組</router-link
+            >
           </div>
 
           <!-- 使用 flex-grow 佔據所有剩餘空間，將登出按鈕推到最右邊 (只在桌面版生效) -->
@@ -117,6 +122,13 @@
           class="block text-white hover:text-blue-200 px-4 py-2 hover:bg-blue-800"
           >類別管理</router-link
         >
+        <router-link
+          to="/groups"
+          @click="closeMobileMenu"
+          class="block text-white hover:text-blue-200 px-4 py-2 hover:bg-blue-800"
+          >我的群組</router-link
+        >
+        <!-- <-- 新增這行 -->
         <div class="px-4 py-2">
           <button
             @click="handleLogoutAndCloseMenu"

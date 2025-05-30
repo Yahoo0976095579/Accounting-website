@@ -9,6 +9,8 @@ import Dashboard from "../views/Dashboard.vue";
 import Transactions from "../views/Transactions.vue";
 import Categories from "../views/Categories.vue";
 import NotFound from "../views/NotFound.vue"; // 可選的 404 頁面
+import Groups from "../views/Groups.vue"; // <-- 新增導入
+import GroupDetails from "../views/GroupDetails.vue"; // <-- 新增導入
 
 const routes = [
   {
@@ -46,6 +48,19 @@ const routes = [
     path: "/:pathMatch(.*)*",
     name: "NotFound",
     component: NotFound,
+  },
+  // <-- 新增群組相關路由
+  {
+    path: "/groups",
+    name: "Groups",
+    component: Groups,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/groups/:id", // 動態路由參數 :id 用於群組ID
+    name: "GroupDetails",
+    component: GroupDetails,
+    meta: { requiresAuth: true },
   },
 ];
 

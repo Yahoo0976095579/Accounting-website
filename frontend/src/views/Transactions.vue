@@ -3,8 +3,7 @@
   <div class="container mx-auto p-4">
     <h1 class="text-3xl font-bold mb-6">交易記錄</h1>
 
-    <!-- 篩選和新增按鈕區域 (後續會添加) -->
-    <!-- 篩選和新增按鈕區域 -->
+    <!-- 這是唯一的「篩選和新增按鈕區域」div -->
     <div
       class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0 md:space-x-4 p-4 bg-white rounded-lg shadow-sm"
     >
@@ -15,7 +14,6 @@
           <select
             id="filterType"
             v-model="filters.type"
-            @change="applyFilters"
             class="shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
           >
             <option value="">所有類型</option>
@@ -30,7 +28,6 @@
           <select
             id="filterCategory"
             v-model="filters.category_id"
-            @change="applyFilters"
             class="shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
           >
             <option value="">所有類別</option>
@@ -53,40 +50,37 @@
         </div>
 
         <!-- 日期範圍篩選 -->
-        <!-- client/src/views/Transactions.vue (日期範圍篩選部分 - 修正後) -->
         <div
-          class="flex flex-col sm:flex-row sm:items-center sm:space-x-2 space-y-2 sm:space-y-0"
+          class="flex flex-col sm:flex-row sm:items-center sm:space-x-2 space-y-2 sm:space-y-0 w-full sm:w-auto"
         >
-          <div class="flex items-center space-x-2 w-full sm:w-auto">
-            <!-- 從日期組 -->
-            <label for="startDate" class="text-gray-700 text-sm font-bold"
+          <div class="flex items-center space-x-2 w-full">
+            <label
+              for="startDate"
+              class="text-gray-700 text-sm font-bold whitespace-nowrap"
               >從:</label
             >
             <input
               type="date"
               id="startDate"
               v-model="filters.start_date"
-              @change="applyFilters"
-              class="shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline w-full min-w-[120px]"
+              class="shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline flex-grow min-w-[140px]"
             />
-            <!-- w-full 和 min-w 確保寬度 -->
           </div>
-          <div class="flex items-center space-x-2 w-full sm:w-auto">
-            <!-- 到日期組 -->
-            <label for="endDate" class="text-gray-700 text-sm font-bold"
+          <div class="flex items-center space-x-2 w-full">
+            <label
+              for="endDate"
+              class="text-gray-700 text-sm font-bold whitespace-nowrap"
               >到:</label
             >
             <input
               type="date"
               id="endDate"
               v-model="filters.end_date"
-              @change="applyFilters"
-              class="shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline w-full min-w-[120px]"
+              class="shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline flex-grow min-w-[140px]"
             />
-            <!-- w-full 和 min-w 確保寬度 -->
           </div>
         </div>
-        <!-- 搜索欄 (新增) -->
+        <!-- 搜索欄 -->
         <div>
           <label for="searchTerm" class="sr-only">搜索描述</label>
           <input
@@ -97,157 +91,185 @@
             class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
           />
         </div>
+        <!-- 搜尋按鈕 -->
+        <button
+          @click="applyFilters"
+          type="button"
+          class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm whitespace-nowrap flex-shrink-0"
+        >
+          搜尋
+        </button>
+        <!-- 重置篩選按鈕 -->
         <button
           @click="resetFilters"
-          class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm"
+          type="button"
+          class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm whitespace-nowrap flex-shrink-0"
         >
           重置篩選
         </button>
       </div>
-    </div>
+      <!-- <-- 這個 div 結束了 inner "flex flex-wrap" div -->
 
-    <button
-      @click="openAddTransactionModal"
-      class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline min-w-max"
-    >
-      新增交易
-    </button>
+      <!-- 將「新增交易」按鈕移到這裡，與篩選器在同一行 (md:flex-row) -->
+      <button
+        @click="openAddTransactionModal"
+        class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline min-w-max"
+      >
+        新增交易
+      </button>
+    </div>
 
     <!-- 交易列表 -->
     <!-- client/src/views/Transactions.vue (在 <template> 內部) -->
-    <div v-if="transactionStore.isLoading" class="text-center py-8">
-      <LoadingSpinner message="正在載入交易記錄..." />
-    </div>
-    <div v-else-if="transactionStore.error" class="text-center py-8">
-      <p class="text-red-500 text-lg">錯誤：{{ transactionStore.error }}</p>
-    </div>
-    <div v-else>
-      <div
-        v-if="transactionStore.transactions.length === 0"
-        class="text-center py-8 text-gray-500"
-      >
-        <p>尚無交易記錄。</p>
-        <p class="mt-2">點擊 "新增交易" 按鈕來添加第一筆交易吧！</p>
+    <!-- 交易列表區塊（只針對交易列表顯示 loading，不會整頁閃爍） -->
+    <div>
+      <div v-if="transactionStore.isLoading" class="text-center py-8">
+        <LoadingSpinner message="正在載入交易記錄..." />
       </div>
-      <div v-else class="bg-white shadow-md rounded-lg overflow-hidden">
-        <table class="min-w-full leading-normal">
-          <thead>
-            <tr>
-              <th
-                class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
-              >
-                日期
-              </th>
-              <th
-                class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
-              >
-                描述
-              </th>
-              <th
-                class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
-              >
-                類別
-              </th>
-              <th
-                class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
-              >
-                類型
-              </th>
-              <th
-                class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
-              >
-                金額
-              </th>
-              <th
-                class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
-              >
-                操作
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="transaction in transactionStore.transactions"
-              :key="transaction.id"
-              class="hover:bg-gray-50"
-            >
-              <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">
-                {{ transaction.date }}
-              </td>
-              <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">
-                {{ transaction.description || "無描述" }}
-              </td>
-              <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">
-                {{ transaction.category_name }}
-              </td>
-              <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">
-                <span
-                  :class="{
-                    'text-green-600': transaction.type === 'income',
-                    'text-red-600': transaction.type === 'expense',
-                  }"
-                  class="capitalize"
-                >
-                  {{ transaction.type === "income" ? "收入" : "支出" }}
-                </span>
-              </td>
-              <td
-                class="px-5 py-5 border-b border-gray-200 bg-white text-sm"
-                :class="{
-                  'text-green-600': transaction.type === 'income',
-                  'text-red-600': transaction.type === 'expense',
-                }"
-              >
-                {{ transaction.type === "income" ? "+" : "-" }}${{
-                  transaction.amount.toFixed(2)
-                }}
-              </td>
-              <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">
-                <div class="flex space-x-2">
-                  <button
-                    @click="openEditTransactionModal(transaction)"
-                    class="text-blue-600 hover:text-blue-900"
-                  >
-                    編輯
-                  </button>
-                  <button
-                    @click="confirmDeleteTransaction(transaction.id)"
-                    class="text-red-600 hover:text-red-900"
-                  >
-                    刪除
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-
-        <!-- 分頁控制 -->
+      <div v-else-if="transactionStore.error" class="text-center py-8">
+        <p class="text-red-500 text-lg">錯誤：{{ transactionStore.error }}</p>
+      </div>
+      <div v-else>
         <div
-          v-if="transactionStore.totalPages > 1"
-          class="flex justify-center items-center space-x-4 py-4 bg-gray-100 rounded-b-lg"
+          v-if="transactionStore.transactions.length === 0"
+          class="text-center py-8 text-gray-500"
         >
-          <button
-            @click="changePage(transactionStore.currentPage - 1)"
-            :disabled="!transactionStore.has_prev"
-            class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+          <p>尚無交易記錄。</p>
+          <p class="mt-2">點擊 "新增交易" 按鈕來添加第一筆交易吧！</p>
+        </div>
+        <div v-else class="bg-white shadow-md rounded-lg overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="min-w-full leading-normal">
+              <thead>
+                <tr>
+                  <th
+                    class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
+                  >
+                    日期
+                  </th>
+                  <th
+                    class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
+                  >
+                    描述
+                  </th>
+                  <th
+                    class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
+                  >
+                    類別
+                  </th>
+                  <th
+                    class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
+                  >
+                    類型
+                  </th>
+                  <th
+                    class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
+                  >
+                    金額
+                  </th>
+                  <th
+                    class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
+                  >
+                    操作
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="transaction in transactionStore.transactions"
+                  :key="transaction.id"
+                  class="hover:bg-gray-50"
+                >
+                  <td
+                    class="px-5 py-5 border-b border-gray-200 bg-white text-sm"
+                  >
+                    {{ transaction.date }}
+                  </td>
+                  <td
+                    class="px-5 py-5 border-b border-gray-200 bg-white text-sm"
+                  >
+                    {{ transaction.description || "無描述" }}
+                  </td>
+                  <td
+                    class="px-5 py-5 border-b border-gray-200 bg-white text-sm"
+                  >
+                    {{ transaction.category_name }}
+                  </td>
+                  <td
+                    class="px-5 py-5 border-b border-gray-200 bg-white text-sm"
+                  >
+                    <span
+                      :class="{
+                        'text-green-600': transaction.type === 'income',
+                        'text-red-600': transaction.type === 'expense',
+                      }"
+                      class="capitalize"
+                    >
+                      {{ transaction.type === "income" ? "收入" : "支出" }}
+                    </span>
+                  </td>
+                  <td
+                    class="px-5 py-5 border-b border-gray-200 bg-white text-sm"
+                    :class="{
+                      'text-green-600': transaction.type === 'income',
+                      'text-red-600': transaction.type === 'expense',
+                    }"
+                  >
+                    {{ transaction.type === "income" ? "+" : "-" }}${{
+                      transaction.amount.toFixed(2)
+                    }}
+                  </td>
+                  <td
+                    class="px-5 py-5 border-b border-gray-200 bg-white text-sm"
+                  >
+                    <div
+                      class="flex flex-col space-y-1 sm:flex-row sm:space-x-2 sm:space-y-0"
+                    >
+                      <button
+                        @click="openEditTransactionModal(transaction)"
+                        class="text-blue-600 hover:text-blue-900"
+                      >
+                        編輯
+                      </button>
+                      <button
+                        @click="confirmDeleteTransaction(transaction.id)"
+                        class="text-red-600 hover:text-red-900"
+                      >
+                        刪除
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <!-- 分頁控制 -->
+          <div
+            v-if="transactionStore.totalPages > 1"
+            class="flex justify-center items-center space-x-4 py-4 bg-gray-100 rounded-b-lg"
           >
-            上一頁
-          </button>
-          <span class="text-gray-700">
-            第 {{ transactionStore.currentPage }} 頁 / 共
-            {{ transactionStore.totalPages }} 頁 ({{
-              transactionStore.totalTransactions
-            }}
-            筆)
-          </span>
-          <button
-            @click="changePage(transactionStore.currentPage + 1)"
-            :disabled="!transactionStore.has_next"
-            class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            下一頁
-          </button>
+            <button
+              @click="changePage(transactionStore.currentPage - 1)"
+              :disabled="!transactionStore.has_prev"
+              class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              上一頁
+            </button>
+            <span class="text-gray-700">
+              第 {{ transactionStore.currentPage }} 頁 / 共
+              {{ transactionStore.totalPages }} 頁 ({{
+                transactionStore.totalTransactions
+              }}
+              筆)
+            </span>
+            <button
+              @click="changePage(transactionStore.currentPage + 1)"
+              :disabled="!transactionStore.has_next"
+              class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              下一頁
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -303,34 +325,19 @@ const currentTransaction = ref(null); // 用於編輯時傳遞交易數據
 const showConfirmDeleteModal = ref(false);
 const transactionToDeleteId = ref(null); // 儲存要刪除的交易ID
 
-// 防抖計時器
-let searchDebounceTimer = null; // <-- 新增
-
-// 在組件載入時，先獲取類別，然後再獲取交易（因為交易篩選可能需要類別數據）
-onMounted(async () => {
-  await categoryStore.fetchCategories(); // 確保類別數據已載入
-  applyFilters(); // 載入時應用初始篩選（即無篩選）
-});
-
-// 當篩選條件變化時，應用篩選
+// applyFilters 函數現在只會在點擊「搜尋」按鈕時調用
 const applyFilters = () => {
-  // 在應用篩選時，總是回到第一頁
-  transactionStore.fetchTransactions(filters, 1);
+  console.log("Applying filters (manually triggered)");
+  transactionStore.fetchTransactions(filters, 1); // 應用篩選，回到第一頁
   transactionStore.setCurrentFilters(filters); // 儲存當前篩選條件到 Store
 };
 
-// 監聽 search_term 的變化，並使用防抖處理
-watch(
-  () => filters.search_term,
-  (newVal) => {
-    if (searchDebounceTimer) {
-      clearTimeout(searchDebounceTimer);
-    }
-    searchDebounceTimer = setTimeout(() => {
-      applyFilters();
-    }, 500); // 500 毫秒的防抖延遲
-  }
-);
+// 在組件載入時，先獲取類別，然後再獲取交易（因為交易篩選可能需要類別數據）
+onMounted(async () => {
+  await categoryStore.fetchCategories();
+  // 在這裡調用一次 applyFilters，確保初始頁面載入時有數據
+  applyFilters(); // 載入時應用初始篩選
+});
 
 // 重置篩選條件
 const resetFilters = () => {
@@ -338,9 +345,8 @@ const resetFilters = () => {
   filters.category_id = "";
   filters.start_date = "";
   filters.end_date = "";
-  filters.search_term = ""; // <-- 新增：重置搜索詞
-  // applyFilters 會在 watch(filters.search_term) 觸發或手動調用
-  applyFilters(); // 手動調用確保立即刷新，因為 search_term 可能為空
+  filters.search_term = "";
+  applyFilters(); // 重置後自動應用篩選
 };
 
 // 處理分頁
@@ -366,7 +372,7 @@ const closeTransactionModal = () => {
 };
 
 const handleTransactionSaved = async () => {
-  // 當交易新增或更新成功後，重新載入交易列表
+  // 只刷新交易列表，不刷新整頁
   await transactionStore.fetchTransactions(
     transactionStore.currentFilters,
     transactionStore.currentPage,

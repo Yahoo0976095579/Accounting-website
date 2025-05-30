@@ -1,11 +1,10 @@
-# server/app.py
 from flask import Flask, request, jsonify, session, redirect, url_for
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, date, timedelta
-from sqlalchemy import func, extract
+from sqlalchemy import func, extract, UniqueConstraint # <-- 確保這裡有 UniqueConstraint
 import os
 from dotenv import load_dotenv
 
@@ -41,15 +40,30 @@ def load_user(user_id):
 
 # --- 資料庫模型定義 ---
 
+# server/app.py (在 User 模型內部)
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    is_active = db.Column(db.Boolean, nullable=False, default=True) # <-- 確保這行存在並設置為 True
 
-    # 與 Transaction 和 Category 的關係
+    # 與 Transaction 和 Category 的關係 (保持不變)
     categories = db.relationship('Category', backref='user', lazy=True)
     transactions = db.relationship('Transaction', backref='user', lazy=True)
+
+    # <-- 新增或確保以下群組相關的關係定義
+    # Group.created_by_user_id (創建的群組)
+    created_groups = db.relationship('Group', foreign_keys='Group.created_by_user_id', backref='creator', lazy=True)
+    # GroupMember (所屬的群組成員身份)
+    group_memberships = db.relationship('GroupMember', backref='member_user', lazy=True)
+    # Invitation (發送的邀請)
+    sent_invitations = db.relationship('Invitation', foreign_keys='Invitation.invited_by_user_id', backref='sender', lazy=True)
+    # Invitation (收到的邀請)
+    received_invitations = db.relationship('Invitation', foreign_keys='Invitation.invited_user_id', backref='receiver', lazy=True)
+    # GroupTransaction (在群組中記錄的交易)
+    recorded_group_transactions = db.relationship('GroupTransaction', foreign_keys='GroupTransaction.created_by_user_id', backref='creator', lazy=True)
+    # --> 結束新增或確認
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -57,22 +71,43 @@ class User(UserMixin, db.Model):
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
+    # UserMixin 默認需要這些屬性
+    # @property
+    # def is_active(self):
+    #     return True # 已經通過 is_active 欄位處理，所以這個屬性方法可以移除或確保其簡單返回 True
+
+    @property
+    def is_authenticated(self):
+        return True
+
+    @property
+    def is_anonymous(self):
+        return False
+
+    def get_id(self):
+        return str(self.id)
+
     def to_dict(self):
         return {
             'id': self.id,
             'username': self.username,
-            'created_at': self.created_at.isoformat()
+            'created_at': self.created_at.isoformat(),
+            'is_active': self.is_active # 確保這裡也包含
         }
 
+# server/app.py (在 Category 模型內部)
 class Category(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     type = db.Column(db.String(10), nullable=False) # 'income' or 'expense'
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False) # 外鍵，歸屬於特定使用者
 
-    # === 移除原有的 transactions 關係，它現在由 Transaction 端的 backref 管理 ===
-    # 例如，如果你有一個類別物件 cat，你可以用 cat.transactions_in_category 訪問屬於它的交易
-    # ===========================================================================
+       # 修正這行：將 backref 改為不會衝突的名稱
+    transactions_in_category = db.relationship('Transaction', backref='personal_transactions_from_category', lazy=True)
+
+    # <-- 新增這行：與 GroupTransaction 的關係
+    group_transactions_with_category = db.relationship('GroupTransaction', backref='category', lazy=True)
+    # --> 結束新增
 
     def __repr__(self):
         return f"Category('{self.name}', '{self.type}', User_id: {self.user_id})"
@@ -96,9 +131,8 @@ class Transaction(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False) # 外鍵，歸屬於特定使用者
 
     # === 新增這行，明確定義與 Category 的關聯 ===
-    # 'transactions_in_category' 是 Category 端用於反向查找交易的屬性名
-    category = db.relationship('Category', backref='transactions_in_category', lazy=True)
-    # ============================================
+    # 修正這行：將 backref 改為不會衝突的名稱
+    category = db.relationship('Category', backref='related_transactions_via_category_fk', lazy=True)
 
     def __repr__(self):
         return f"Transaction('{self.amount}', '{self.type}', '{self.date}', User_id: {self.user_id})"
@@ -117,6 +151,120 @@ class Transaction(db.Model):
             'category_name': self.category.name if self.category else None, # 這裡現在應該能正確訪問 category 屬性了
             'user_id': self.user_id
         }
+
+# --- 新增資料庫模型定義 (群組相關) ---
+
+class Group(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.String(255), nullable=True)
+    created_by_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    # 關係定義：
+    # group_members: 該群組的所有成員 (通過 GroupMember 中間表)
+    group_members = db.relationship('GroupMember', backref='group', lazy=True)
+    # group_transactions: 該群組的所有交易
+    group_transactions = db.relationship('GroupTransaction', backref='group', lazy=True)
+    # creator: 創建該群組的使用者 (backref='created_groups' 已在 User 模型中定義)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'description': self.description,
+            'created_by_user_id': self.created_by_user_id,
+            'created_by_username': self.creator.username if self.creator else None, # 透過 creator 關係獲取
+            'created_at': self.created_at.isoformat()
+        }
+
+class GroupMember(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    group_id = db.Column(db.Integer, db.ForeignKey('group.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    role = db.Column(db.String(20), nullable=False, default='member') # 'admin', 'member'
+    status = db.Column(db.String(20), nullable=False, default='accepted') # 'pending', 'accepted', 'rejected'
+    joined_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    # 關係定義：
+    # member_user: 這個成員記錄對應的使用者 (backref='group_memberships' 已在 User 模型中定義)
+
+    __table_args__ = (UniqueConstraint('group_id', 'user_id', name='_group_user_uc'),) # 確保一個使用者在一個群組中只能有一條記錄
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'group_id': self.group_id,
+            'user_id': self.user_id,
+            'username': self.member_user.username if self.member_user else None, # 透過 member_user 關係獲取
+            'role': self.role,
+            'status': self.status,
+            'joined_at': self.joined_at.isoformat()
+        }
+
+class Invitation(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    group_id = db.Column(db.Integer, db.ForeignKey('group.id'), nullable=False)
+    invited_by_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    invited_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False) # 被邀請的使用者ID
+    status = db.Column(db.String(20), nullable=False, default='pending') # 'pending', 'accepted', 'rejected'
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    expires_at = db.Column(db.DateTime, nullable=True) # 邀請有效期
+
+    # 關係定義：
+    # group_obj: 邀請所屬的群組
+    group_obj = db.relationship('Group', foreign_keys=[group_id], backref='invitations')
+    # sender: 發送邀請的使用者 (backref='sent_invitations' 已在 User 模型中定義)
+    # receiver: 接收邀請的使用者 (backref='received_invitations' 已在 User 模型中定義)
+
+    __table_args__ = (UniqueConstraint('group_id', 'invited_user_id', name='_group_invited_user_uc'),) # 確保一個使用者在一個群組中只能有一條未處理的邀請
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'group_id': self.group_id,
+            'group_name': self.group_obj.name if self.group_obj else None,
+            'invited_by_user_id': self.invited_by_user_id,
+            'invited_by_username': self.sender.username if self.sender else None,
+            'invited_user_id': self.invited_user_id,
+            'invited_username': self.receiver.username if self.receiver else None,
+            'status': self.status,
+            'created_at': self.created_at.isoformat(),
+            'expires_at': self.expires_at.isoformat() if self.expires_at else None
+        }
+
+class GroupTransaction(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    group_id = db.Column(db.Integer, db.ForeignKey('group.id'), nullable=False)
+    amount = db.Column(db.Float, nullable=False)
+    type = db.Column(db.String(10), nullable=False) # 'income' or 'expense'
+    description = db.Column(db.String(255), nullable=True)
+    date = db.Column(db.Date, nullable=False)
+    category_id = db.Column(db.Integer, db.ForeignKey('category.id'), nullable=False) # 暫時共用個人類別
+    created_by_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False) # 誰記錄的這筆交易
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    # payer_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True) # 初版暫不處理分帳，可以先不加或設置為 Nullable
+
+    # 關係定義：
+    # creator: 記錄這筆交易的使用者 (backref='recorded_group_transactions' 已在 User 模型中定義)
+    # category: 交易的類別 (backref='group_transactions_with_category' 將在 Category 模型中定義)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'group_id': self.group_id,
+            'amount': self.amount,
+            'type': self.type,
+            'description': self.description,
+            'date': self.date.isoformat() if self.date else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'category_id': self.category_id,
+            'category_name': self.category.name if self.category else None, # 透過 category 關係獲取
+            'created_by_user_id': self.created_by_user_id,
+            'created_by_username': self.creator.username if self.creator else None,
+            # 'payer_id': self.payer_id # 如果沒有 payer_id 欄位，就不要在這裡顯示
+        }
+
 
 # --- 數據庫初始化 (在應用程式首次請求前創建所有表) ---
 # --- 數據庫初始化 (在應用程式首次請求前創建所有表) ---
@@ -143,7 +291,7 @@ def register():
         return jsonify({"error": "Username and password are required"}), 400
 
     if User.query.filter_by(username=username).first():
-        return jsonify({"error": "Username already exists"}), 409 # Conflict
+        return jsonify({"error": "用戶名已存在"}), 409 # Conflict
 
     new_user = User(username=username)
     new_user.set_password(password)
@@ -205,6 +353,548 @@ def logout():
 def get_current_user():
     return jsonify(current_user.to_dict()), 200
 
+# --- 群組管理 API ---
+
+@app.route('/api/groups', methods=['POST'])
+@login_required
+def create_group():
+    data = request.get_json()
+    name = data.get('name')
+    description = data.get('description')
+
+    if not name:
+        return jsonify({"error": "群組名稱為必填項"}), 400
+
+    # 創建群組
+    new_group = Group(name=name, description=description, created_by_user_id=current_user.id)
+    db.session.add(new_group)
+    db.session.commit() # 先提交，以便獲取 new_group.id
+
+    # 將創建者自動添加為群組管理員
+    group_member = GroupMember(group_id=new_group.id, user_id=current_user.id, role='admin', status='accepted')
+    db.session.add(group_member)
+    db.session.commit()
+
+    return jsonify({"message": "群組創建成功", "group": new_group.to_dict()}), 201
+
+@app.route('/api/groups', methods=['GET'])
+@login_required
+def get_user_groups():
+    # 獲取當前使用者所屬的所有群組
+    memberships = GroupMember.query.filter_by(user_id=current_user.id, status='accepted').all()
+    groups_data = []
+    for membership in memberships:
+        group = membership.group # 透過關係獲取 Group 對象
+        if group:
+            group_dict = group.to_dict()
+            group_dict['your_role'] = membership.role # 附加上使用者在該群組的角色
+            group_dict['member_count'] = len(group.group_members) # 成員數量
+            groups_data.append(group_dict)
+    return jsonify(groups_data), 200
+
+@app.route('/api/groups/<int:group_id>', methods=['GET'])
+@login_required
+def get_group_details(group_id):
+    # 確保使用者是群組成員
+    group_member = GroupMember.query.filter_by(group_id=group_id, user_id=current_user.id, status='accepted').first()
+    if not group_member:
+        return jsonify({"error": "群組未找到或您不是該群組成員"}), 404
+
+    group = group_member.group
+    group_details = group.to_dict()
+    group_details['your_role'] = group_member.role
+
+    members_data = []
+    for member in group.group_members:
+        members_data.append(member.to_dict())
+    group_details['members'] = members_data
+
+    # 這裡可以選擇性地添加群組的總收支等摘要信息
+    # group_details['summary'] = {} # TODO: Implement group summary API later
+
+    return jsonify(group_details), 200
+
+@app.route('/api/groups/<int:group_id>', methods=['PUT'])
+@login_required
+def update_group(group_id):
+    # 檢查使用者是否為群組管理員
+    group_member = GroupMember.query.filter_by(group_id=group_id, user_id=current_user.id, role='admin', status='accepted').first()
+    if not group_member:
+        return jsonify({"error": "群組未找到或您無權修改該群組"}), 403 # Forbidden
+
+    group = group_member.group
+    data = request.get_json()
+    group.name = data.get('name', group.name)
+    group.description = data.get('description', group.description)
+
+    try:
+        db.session.commit()
+        return jsonify({"message": "群組更新成功", "group": group.to_dict()}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": "群組更新失敗: " + str(e)}), 500
+
+@app.route('/api/groups/<int:group_id>', methods=['DELETE'])
+@login_required
+def delete_group(group_id):
+    # 檢查使用者是否為群組管理員
+    group_member = GroupMember.query.filter_by(group_id=group_id, user_id=current_user.id, role='admin', status='accepted').first()
+    if not group_member:
+        return jsonify({"error": "群組未找到或您無權刪除該群組"}), 403 # Forbidden
+
+    group = group_member.group
+
+    # 檢查是否有成員或交易關聯
+    if group.group_members.count() > 1: # 如果還有其他成員（除了創建者自己）
+        return jsonify({"error": "群組中仍有其他成員，無法直接刪除"}), 400
+    if GroupTransaction.query.filter_by(group_id=group_id).first():
+        return jsonify({"error": "群組中仍有交易記錄，無法直接刪除"}), 400
+
+    try:
+        # 刪除所有相關的 GroupMember 記錄 (包括創建者自己的)
+        GroupMember.query.filter_by(group_id=group_id).delete()
+        db.session.delete(group)
+        db.session.commit()
+        return jsonify({"message": "群組刪除成功"}), 204
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": "群組刪除失敗: " + str(e)}), 500
+
+@app.route('/api/groups/<int:group_id>/leave', methods=['POST'])
+@login_required
+def leave_group(group_id):
+    # 查找使用者在該群組的成員身份
+    group_member = GroupMember.query.filter_by(group_id=group_id, user_id=current_user.id, status='accepted').first()
+    if not group_member:
+        return jsonify({"error": "您不是該群組成員"}), 404
+
+    # 如果是群組唯一管理員且還有其他成員，不能直接退出
+    if group_member.role == 'admin' and GroupMember.query.filter_by(group_id=group_id, role='admin', status='accepted').count() == 1 and GroupMember.query.filter_by(group_id=group_id, status='accepted').count() > 1:
+        return jsonify({"error": "您是該群組的唯一管理員，請先轉移管理權限或移除其他成員再退出"}), 400
+
+    try:
+        db.session.delete(group_member)
+        db.session.commit()
+        return jsonify({"message": "已成功退出群組"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": "退出群組失敗: " + str(e)}), 500
+
+
+# --- 群組邀請 API ---
+
+@app.route('/api/groups/<int:group_id>/invite', methods=['POST'])
+@login_required
+def invite_member(group_id):
+    # 檢查使用者是否為群組管理員
+    group_member = GroupMember.query.filter_by(group_id=group_id, user_id=current_user.id, role='admin', status='accepted').first()
+    if not group_member:
+        return jsonify({"error": "群組未找到或您無權邀請成員"}), 403
+
+    data = request.get_json()
+    invited_username = data.get('username')
+    if not invited_username:
+        return jsonify({"error": "被邀請的使用者名稱為必填項"}), 400
+
+    invited_user = User.query.filter_by(username=invited_username).first()
+    if not invited_user:
+        return jsonify({"error": "被邀請的使用者不存在"}), 404
+
+    if invited_user.id == current_user.id:
+        return jsonify({"error": "不能邀請自己"}), 400
+
+    # 檢查是否已經是成員
+    if GroupMember.query.filter_by(group_id=group_id, user_id=invited_user.id, status='accepted').first():
+        return jsonify({"error": "該使用者已是群組成員"}), 409
+
+    # 檢查是否已有待處理邀請
+    if Invitation.query.filter_by(group_id=group_id, invited_user_id=invited_user.id, status='pending').first():
+        return jsonify({"error": "已存在對該使用者的待處理邀請"}), 409
+
+    new_invitation = Invitation(
+        group_id=group_id,
+        invited_by_user_id=current_user.id,
+        invited_user_id=invited_user.id,
+        status='pending'
+    )
+    try:
+        db.session.add(new_invitation)
+        db.session.commit()
+        return jsonify({"message": f"已成功向 {invited_username} 發送邀請"}), 201
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": "發送邀請失敗: " + str(e)}), 500
+
+@app.route('/api/invitations', methods=['GET'])
+@login_required
+def get_user_invitations():
+    # 獲取當前使用者收到的所有待處理邀請
+    invitations = Invitation.query.filter_by(invited_user_id=current_user.id, status='pending').all()
+    return jsonify([inv.to_dict() for inv in invitations]), 200
+
+@app.route('/api/invitations/<int:invitation_id>/accept', methods=['POST'])
+@login_required
+def accept_invitation(invitation_id):
+    invitation = Invitation.query.filter_by(id=invitation_id, invited_user_id=current_user.id, status='pending').first()
+    if not invitation:
+        return jsonify({"error": "邀請未找到或已失效"}), 404
+
+    # 檢查是否已是成員 (以防萬一)
+    if GroupMember.query.filter_by(group_id=invitation.group_id, user_id=current_user.id, status='accepted').first():
+        invitation.status = 'rejected' # 如果已是成員，則將邀請狀態設為拒絕
+        db.session.commit()
+        return jsonify({"error": "您已是該群組成員，邀請已處理"}), 400
+
+    try:
+        # 將使用者添加為群組成員
+        new_member = GroupMember(group_id=invitation.group_id, user_id=current_user.id, role='member', status='accepted')
+        db.session.add(new_member)
+        invitation.status = 'accepted' # 更新邀請狀態
+        db.session.commit()
+        return jsonify({"message": f"已成功接受邀請，加入群組: {invitation.group_obj.name}"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": "接受邀請失敗: " + str(e)}), 500
+
+@app.route('/api/invitations/<int:invitation_id>/reject', methods=['POST'])
+@login_required
+def reject_invitation(invitation_id):
+    invitation = Invitation.query.filter_by(id=invitation_id, invited_user_id=current_user.id, status='pending').first()
+    if not invitation:
+        return jsonify({"error": "邀請未找到或已失效"}), 404
+
+    try:
+        invitation.status = 'rejected' # 更新邀請狀態
+        db.session.commit()
+        return jsonify({"message": "已成功拒絕邀請"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": "拒絕邀請失敗: " + str(e)}), 500
+
+# --- 群組交易 API (簡化版，詳細實現將在後續步驟) ---
+# 這些 API 只是佔位符，確保其存在且受到保護。
+# 細節實現將與個人交易類似，但需考慮 group_id 和權限。
+
+@app.route('/api/groups/<int:group_id>/transactions', methods=['GET'])
+@login_required
+def get_group_transactions(group_id):
+    # 檢查使用者是否為群組成員
+    group_member = GroupMember.query.filter_by(group_id=group_id, user_id=current_user.id, status='accepted').first()
+    if not group_member:
+        return jsonify({"error": "群組未找到或您不是該群組成員"}), 404
+
+    # 篩選參數 (與個人交易類似)
+    transaction_type = request.args.get('type') # 'income' or 'expense'
+    category_id = request.args.get('category_id', type=int)
+    start_date_str = request.args.get('start_date') # YYYY-MM-DD
+    end_date_str = request.args.get('end_date')     # YYYY-MM-DD
+    search_term = request.args.get('search_term')
+
+    # 分頁參數
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+
+    query = GroupTransaction.query.filter_by(group_id=group_id) # <-- 關鍵：按 group_id 篩選
+
+    if transaction_type in ['income', 'expense']:
+        query = query.filter_by(type=transaction_type)
+    if category_id:
+        query = query.filter_by(category_id=category_id)
+    if start_date_str:
+        try:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            query = query.filter(GroupTransaction.date >= start_date)
+        except ValueError:
+            return jsonify({"error": "Invalid start_date format. Use YYYY-MM-DD."}), 400
+    if end_date_str:
+        try:
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            query = query.filter(GroupTransaction.date <= end_date)
+        except ValueError:
+            return jsonify({"error": "Invalid end_date format. Use YYYY-MM-DD."}), 400
+    if search_term:
+        query = query.filter(GroupTransaction.description.ilike(f"%{search_term}%"))
+
+    # 排序：最新交易在前
+    query = query.order_by(GroupTransaction.date.desc(), GroupTransaction.created_at.desc())
+
+    paginated_transactions = query.paginate(page=page, per_page=per_page, error_out=False)
+
+    transactions_data = [t.to_dict() for t in paginated_transactions.items]
+
+    return jsonify({
+        "transactions": transactions_data,
+        "total": paginated_transactions.total,
+        "pages": paginated_transactions.pages,
+        "page": paginated_transactions.page,
+        "per_page": paginated_transactions.per_page,
+        "has_next": paginated_transactions.has_next,
+        "has_prev": paginated_transactions.has_prev
+    }), 200
+
+@app.route('/api/groups/<int:group_id>/transactions', methods=['POST'])
+@login_required
+def add_group_transaction(group_id):
+    # 檢查使用者是否為群組成員
+    group_member = GroupMember.query.filter_by(group_id=group_id, user_id=current_user.id, status='accepted').first()
+    if not group_member:
+        return jsonify({"error": "群組未找到或您不是該群組成員"}), 404
+
+    data = request.get_json()
+    try:
+        amount = float(data.get('amount'))
+        transaction_type = data.get('type')
+        category_id = data.get('category_id')
+        description = data.get('description')
+        date_str = data.get('date')
+
+        if not all([amount, transaction_type, category_id, date_str]):
+            return jsonify({"error": "缺少必填欄位 (金額, 類型, 類別ID, 日期)"}), 400
+        if transaction_type not in ['income', 'expense']:
+            return jsonify({"error": "無效的交易類型"}), 400
+
+        # 檢查 category_id 是否存在
+        # 注意：這裡的 Category 是共用，不檢查 user_id
+        category = Category.query.get(category_id)
+        if not category:
+            return jsonify({"error": "類別未找到"}), 404
+
+        transaction_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+
+        new_transaction = GroupTransaction(
+            group_id=group_id, # <-- 關鍵：設置 group_id
+            amount=amount,
+            type=transaction_type,
+            description=description,
+            date=transaction_date,
+            category_id=category_id,
+            created_by_user_id=current_user.id # 記錄誰創建了這筆交易
+        )
+        db.session.add(new_transaction)
+        db.session.commit()
+        db.session.refresh(new_transaction) # 刷新以載入關係數據 (如 category_name)
+        return jsonify(new_transaction.to_dict()), 201
+    except ValueError:
+        return jsonify({"error": "金額或日期格式無效"}), 400
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": "新增群組交易失敗: " + str(e)}), 500
+
+@app.route('/api/groups/<int:group_id>/transactions/<int:transaction_id>', methods=['GET'])
+@login_required
+def get_group_transaction(group_id, transaction_id):
+    # 檢查使用者是否為群組成員
+    group_member = GroupMember.query.filter_by(group_id=group_id, user_id=current_user.id, status='accepted').first()
+    if not group_member:
+        return jsonify({"error": "群組未找到或您不是該群組成員"}), 404
+
+    # 確保交易屬於該群組，且使用者是成員
+    transaction = GroupTransaction.query.filter_by(id=transaction_id, group_id=group_id).first()
+    if not transaction:
+        return jsonify({"error": "交易未找到或不屬於該群組"}), 404
+    return jsonify(transaction.to_dict()), 200
+
+@app.route('/api/groups/<int:group_id>/transactions/<int:transaction_id>', methods=['PUT'])
+@login_required
+def update_group_transaction(group_id, transaction_id):
+    # 檢查使用者是否為群組管理員
+    group_member = GroupMember.query.filter_by(group_id=group_id, user_id=current_user.id, status='accepted').first()
+    if not group_member:
+        return jsonify({"error": "群組未找到或您不是該群組成員"}), 404
+
+    # 確保交易屬於該群組
+    transaction = GroupTransaction.query.filter_by(id=transaction_id, group_id=group_id).first()
+    if not transaction:
+        return jsonify({"error": "交易未找到或不屬於該群組"}), 404
+
+    # TODO: 考慮是否只有創建者或管理員才能修改交易？
+    # 目前：只要是群組成員就可以修改
+    # 考慮：只有管理員能修改其他成員的交易，成員只能修改自己的
+    # 簡化：先讓群組成員都可以修改
+    # if transaction.created_by_user_id != current_user.id and group_member.role != 'admin':
+    #     return jsonify({"error": "您無權修改此交易"}), 403
+
+    data = request.get_json()
+    try:
+        if 'amount' in data:
+            transaction.amount = float(data.get('amount'))
+        if 'type' in data:
+            if data.get('type') not in ['income', 'expense']:
+                return jsonify({"error": "無效的交易類型"}), 400
+            transaction.type = data.get('type')
+        if 'description' in data:
+            transaction.description = data.get('description')
+        if 'date' in data:
+            transaction.date = datetime.strptime(data.get('date'), '%Y-%m-%d').date()
+        if 'category_id' in data:
+            category_id = data.get('category_id')
+            category = Category.query.get(category_id) # 不檢查 user_id
+            if not category:
+                return jsonify({"error": "類別未找到"}), 404
+            transaction.category_id = category_id
+
+        db.session.commit()
+        db.session.refresh(transaction) # 刷新以載入關係數據
+        return jsonify(transaction.to_dict()), 200
+    except ValueError:
+        return jsonify({"error": "金額或日期格式無效"}), 400
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": "更新群組交易失敗: " + str(e)}), 500
+
+@app.route('/api/groups/<int:group_id>/transactions/<int:transaction_id>', methods=['DELETE'])
+@login_required
+def delete_group_transaction(group_id, transaction_id):
+    # 檢查使用者是否為群組成員
+    group_member = GroupMember.query.filter_by(group_id=group_id, user_id=current_user.id, status='accepted').first()
+    if not group_member:
+        return jsonify({"error": "群組未找到或您不是該群組成員"}), 404
+
+    # 確保交易屬於該群組
+    transaction = GroupTransaction.query.filter_by(id=transaction_id, group_id=group_id).first()
+    if not transaction:
+        return jsonify({"error": "交易未找到或不屬於該群組"}), 404
+
+    # TODO: 考慮是否只有創建者或管理員才能刪除交易？
+    # 簡化：先讓群組成員都可以刪除
+    # if transaction.created_by_user_id != current_user.id and group_member.role != 'admin':
+    #     return jsonify({"error": "您無權刪除此交易"}), 403
+
+    try:
+        db.session.delete(transaction)
+        db.session.commit()
+        return jsonify({"message": "群組交易刪除成功"}), 204
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": "刪除群組交易失敗: " + str(e)}), 500
+
+# --- 群組統計 API (簡化版，詳細實現將在後續步驟) ---
+# 這些 API 也需要填充實際邏輯，類似於個人摘要 API。
+
+@app.route('/api/groups/<int:group_id>/summary', methods=['GET'])
+@login_required
+def get_group_summary(group_id):
+    group_member = GroupMember.query.filter_by(group_id=group_id, user_id=current_user.id, status='accepted').first()
+    if not group_member:
+        return jsonify({"error": "群組未找到或您不是該群組成員"}), 404
+
+    total_income = db.session.query(func.sum(GroupTransaction.amount)).filter_by(group_id=group_id, type='income').scalar() or 0
+    total_expense = db.session.query(func.sum(GroupTransaction.amount)).filter_by(group_id=group_id, type='expense').scalar() or 0
+
+    return jsonify({
+        "total_income": total_income,
+        "total_expense": total_expense,
+        "balance": total_income - total_expense,
+    }), 200
+
+@app.route('/api/groups/<int:group_id>/summary/category_breakdown', methods=['GET'])
+@login_required
+def get_group_category_breakdown(group_id):
+    group_member = GroupMember.query.filter_by(group_id=group_id, user_id=current_user.id, status='accepted').first()
+    if not group_member:
+        return jsonify({"error": "群組未找到或您不是該群組成員"}), 404
+
+    transaction_type = request.args.get('type') # 'income' or 'expense'
+    start_date_str = request.args.get('start_date')
+    end_date_str = request.args.get('end_date')
+
+    query = db.session.query(
+        Category.name,
+        Category.type,
+        func.sum(GroupTransaction.amount)
+    ).join(GroupTransaction).filter(
+        GroupTransaction.group_id == group_id, # <-- 關鍵：按 group_id 篩選
+    )
+
+    if transaction_type in ['income', 'expense']:
+        query = query.filter(GroupTransaction.type == transaction_type)
+    if start_date_str:
+        try:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            query = query.filter(GroupTransaction.date >= start_date)
+        except ValueError:
+            return jsonify({"error": "Invalid start_date format. Use YYYY-MM-DD."}), 400
+    if end_date_str:
+        try:
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            query = query.filter(GroupTransaction.date <= end_date)
+        except ValueError:
+            return jsonify({"error": "Invalid end_date format. Use YYYY-MM-DD."}), 400
+
+    category_summary = query.group_by(Category.name, Category.type).all()
+
+    summary_by_category = []
+    for name, type, total_amount in category_summary:
+        summary_by_category.append({
+            'category_name': name,
+            'type': type,
+            'total_amount': total_amount
+        })
+
+    return jsonify(summary_by_category), 200
+
+@app.route('/api/groups/<int:group_id>/summary/trend', methods=['GET'])
+@login_required
+def get_group_trend_data(group_id):
+    group_member = GroupMember.query.filter_by(group_id=group_id, user_id=current_user.id, status='accepted').first()
+    if not group_member:
+        return jsonify({"error": "群組未找到或您不是該群組成員"}), 404
+
+    interval = request.args.get('interval', 'month') # 'day', 'week', 'month'
+    start_date_str = request.args.get('start_date')
+    end_date_str = request.args.get('end_date')
+
+    query = GroupTransaction.query.filter_by(group_id=group_id) # <-- 關鍵：按 group_id 篩選
+
+    if start_date_str:
+        try:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            query = query.filter(GroupTransaction.date >= start_date)
+        except ValueError:
+            return jsonify({"error": "Invalid start_date format. Use YYYY-MM-DD."}), 400
+    if end_date_str:
+        try:
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            query = query.filter(GroupTransaction.date <= end_date)
+        except ValueError:
+            return jsonify({"error": "Invalid end_date format. Use YYYY-MM-DD."}), 400
+
+    if interval == 'day':
+        group_by_col = func.strftime('%Y-%m-%d', GroupTransaction.date)
+    elif interval == 'week':
+        group_by_col = func.strftime('%Y-%W', GroupTransaction.date)
+    elif interval == 'month':
+        group_by_col = func.strftime('%Y-%m', GroupTransaction.date)
+    else:
+        return jsonify({"error": "Invalid interval. Must be 'day', 'week', or 'month'."}), 400
+
+    income_data = query.with_entities(
+        group_by_col.label('period'),
+        func.sum(GroupTransaction.amount)
+    ).filter(GroupTransaction.type == 'income').group_by('period').order_by('period').all()
+
+    expense_data = query.with_entities(
+        group_by_col.label('period'),
+        func.sum(GroupTransaction.amount)
+    ).filter(GroupTransaction.type == 'expense').group_by('period').order_by('period').all()
+
+    income_map = {item.period: item[1] for item in income_data}
+    expense_map = {item.period: item[1] for item in expense_data}
+
+    all_periods = sorted(list(set(income_map.keys()) | set(expense_map.keys())))
+
+    trend_data = []
+    for period in all_periods:
+        trend_data.append({
+            'period': period,
+            'income': income_map.get(period, 0),
+            'expense': expense_map.get(period, 0),
+            'balance': income_map.get(period, 0) - expense_map.get(period, 0)
+        })
+
+    return jsonify(trend_data), 200
+
+#下面不動
 # --- 類別相關 API (受保護) ---
 
 @app.route('/api/categories', methods=['GET'])
