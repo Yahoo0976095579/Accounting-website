@@ -8,9 +8,9 @@
 
 - **使用者認證**：註冊、登入、登出，安全的會話管理。
 - **個人記帳**：交易新增、編輯、刪除、查詢，支援多條件篩選與分頁。
-- **類別管理**：自定義收支類別，CRUD 操作。
-- **儀表板**：總收入、總支出、結餘、收支趨勢、類別分佈。
 - **群組記帳**：群組建立、邀請成員、共享交易、成員管理。
+- **儀表板**：總收入、總支出、結餘、收支趨勢、類別分佈。
+- **類別管理**：自定義收支類別，CRUD 操作。
 - **通知與提示**：操作成功/失敗提示、載入動畫、確認刪除彈窗。
 - **響應式設計**：支援桌機與手機，UI 友善。
 
@@ -49,7 +49,7 @@ accounting-app/
 ### 1️⃣ 後端 (Flask)
 
 ```bash
-cd server
+cd backend
 python -m venv venv
 # 啟用虛擬環境
 # Windows: .\venv\Scripts\activate
@@ -62,7 +62,7 @@ python app.py
 ### 2️⃣ 前端 (Vue 3)
 
 ```bash
-cd client
+cd frontend
 npm install
 npm run dev
 ```
@@ -79,8 +79,7 @@ npm run dev
 ### 認證流程
 
 1. 使用者註冊/登入，前端送出帳號密碼至 `/api/register` 或 `/api/login`。
-2. 後端驗證成功，回傳 JWT 或 session cookie。
-3. 前端儲存 token，後續 API 請求自動帶上認證資訊。
+2. 後端驗證成功，回傳 session cookie。
 
 ### 交易 CRUD 流程
 
