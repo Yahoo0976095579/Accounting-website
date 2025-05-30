@@ -2,33 +2,83 @@
 <template>
   <div class="container mx-auto p-4">
     <h1 class="text-3xl font-bold mb-6">交易記錄</h1>
-
-    <!-- 這是唯一的「篩選和新增按鈕區域」div -->
+    <!-- 統計概覽卡片區 -->
+    <!-- filepath: c:\Users\yahoo\OneDrive\Desktop\python程式設計\記帳網站\frontend\src\views\Transactions.vue -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 mb-4 md:mb-6">
+      <div
+        class="bg-green-100 rounded-lg md:rounded-xl p-2 md:p-4 text-center shadow"
+      >
+        <div class="text-green-700 font-bold text-base md:text-lg">
+          本月收入
+        </div>
+        <div
+          class="text-lg md:text-2xl font-extrabold text-green-600 mt-0.5 md:mt-1"
+        >
+          ${{ transactionStore.summary?.income?.toFixed(2) ?? "0.00" }}
+        </div>
+      </div>
+      <div
+        class="bg-red-100 rounded-lg md:rounded-xl p-2 md:p-4 text-center shadow"
+      >
+        <div class="text-red-700 font-bold text-base md:text-lg">本月支出</div>
+        <div
+          class="text-lg md:text-2xl font-extrabold text-red-600 mt-0.5 md:mt-1"
+        >
+          ${{ transactionStore.summary?.expense?.toFixed(2) ?? "0.00" }}
+        </div>
+      </div>
+      <div
+        class="bg-blue-100 rounded-lg md:rounded-xl p-2 md:p-4 text-center shadow"
+      >
+        <div class="text-blue-700 font-bold text-base md:text-lg">本月結餘</div>
+        <div
+          class="text-lg md:text-2xl font-extrabold mt-0.5 md:mt-1"
+          :class="
+            (transactionStore.summary?.balance ?? 0) >= 0
+              ? 'text-blue-600'
+              : 'text-orange-600'
+          "
+        >
+          ${{ transactionStore.summary?.balance?.toFixed(2) ?? "0.00" }}
+        </div>
+      </div>
+      <div
+        class="bg-gray-100 rounded-lg md:rounded-xl p-2 md:p-4 text-center shadow"
+      >
+        <div class="text-gray-700 font-bold text-base md:text-lg">交易筆數</div>
+        <div
+          class="text-lg md:text-2xl font-extrabold text-gray-800 mt-0.5 md:mt-1"
+        >
+          {{ transactionStore.totalTransactions ?? 0 }}
+        </div>
+      </div>
+    </div>
+    <!-- filepath: c:\Users\yahoo\OneDrive\Desktop\python程式設計\記帳網站\frontend\src\views\Transactions.vue -->
     <div
-      class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0 md:space-x-4 p-4 bg-white rounded-lg shadow-sm"
+      class="mb-6 flex flex-col gap-3 p-2 bg-white rounded-lg shadow-sm md:flex-row md:items-center md:justify-between md:gap-4 md:p-4"
     >
-      <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
+      <!-- 左側：篩選器 -->
+      <div
+        class="flex flex-col gap-2 w-full md:flex-row md:items-center md:gap-4 md:flex-1"
+      >
         <!-- 交易類型篩選 -->
-        <div>
-          <label for="filterType" class="sr-only">交易類型</label>
+        <div class="w-full md:w-auto">
           <select
             id="filterType"
             v-model="filters.type"
-            class="shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            class="w-full shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
           >
             <option value="">所有類型</option>
             <option value="income">收入</option>
             <option value="expense">支出</option>
           </select>
         </div>
-
         <!-- 類別篩選 -->
-        <div>
-          <label for="filterCategory" class="sr-only">類別</label>
+        <div class="w-full md:w-auto">
           <select
             id="filterCategory"
             v-model="filters.category_id"
-            class="shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            class="w-full shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
           >
             <option value="">所有類別</option>
             <option
@@ -48,80 +98,76 @@
             載入類別失敗
           </p>
         </div>
-
         <!-- 日期範圍篩選 -->
         <div
-          class="flex flex-col sm:flex-row sm:items-center sm:space-x-2 space-y-2 sm:space-y-0 w-full sm:w-auto"
+          class="flex flex-col gap-2 w-full sm:flex-row sm:items-center md:w-auto"
         >
-          <div class="flex items-center space-x-2 w-full">
+          <div class="flex items-center gap-2 w-full">
             <label
               for="startDate"
-              class="text-gray-700 text-sm font-bold whitespace-nowrap"
+              class="text-gray-700 text-xs font-bold whitespace-nowrap"
               >從:</label
             >
             <input
               type="date"
               id="startDate"
               v-model="filters.start_date"
-              class="shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline flex-grow min-w-[140px]"
+              class="w-full shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-xs min-w-[100px]"
             />
           </div>
-          <div class="flex items-center space-x-2 w-full">
+          <div class="flex items-center gap-2 w-full">
             <label
               for="endDate"
-              class="text-gray-700 text-sm font-bold whitespace-nowrap"
+              class="text-gray-700 text-xs font-bold whitespace-nowrap"
               >到:</label
             >
             <input
               type="date"
               id="endDate"
               v-model="filters.end_date"
-              class="shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline flex-grow min-w-[140px]"
+              class="w-full shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-xs min-w-[100px]"
             />
           </div>
         </div>
         <!-- 搜索欄 -->
-        <div>
-          <label for="searchTerm" class="sr-only">搜索描述</label>
+        <div class="w-full md:w-auto">
           <input
             type="text"
             id="searchTerm"
             v-model="filters.search_term"
             placeholder="搜索描述..."
-            class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            class="w-full shadow appearance-none border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
           />
         </div>
-        <!-- 搜尋按鈕 -->
+        <!-- 搜尋/重置 -->
+        <div class="flex gap-2 w-full md:w-auto">
+          <button
+            @click="applyFilters"
+            type="button"
+            class="w-full md:w-auto bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm whitespace-nowrap"
+          >
+            搜尋
+          </button>
+          <button
+            @click="resetFilters"
+            type="button"
+            class="w-full md:w-auto bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm whitespace-nowrap"
+          >
+            重置篩選
+          </button>
+        </div>
+      </div>
+      <!-- 右側：新增交易按鈕 -->
+      <div class="flex-shrink-0 w-full md:w-auto">
         <button
-          @click="applyFilters"
-          type="button"
-          class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm whitespace-nowrap flex-shrink-0"
+          @click="openAddTransactionModal"
+          class="w-full md:w-auto bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline min-w-max"
         >
-          搜尋
-        </button>
-        <!-- 重置篩選按鈕 -->
-        <button
-          @click="resetFilters"
-          type="button"
-          class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm whitespace-nowrap flex-shrink-0"
-        >
-          重置篩選
+          新增交易
         </button>
       </div>
-      <!-- <-- 這個 div 結束了 inner "flex flex-wrap" div -->
-
-      <!-- 將「新增交易」按鈕移到這裡，與篩選器在同一行 (md:flex-row) -->
-      <button
-        @click="openAddTransactionModal"
-        class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline min-w-max"
-      >
-        新增交易
-      </button>
     </div>
 
-    <!-- 交易列表 -->
-    <!-- client/src/views/Transactions.vue (在 <template> 內部) -->
-    <!-- 交易列表區塊（只針對交易列表顯示 loading，不會整頁閃爍） -->
     <div>
       <div v-if="transactionStore.isLoading" class="text-center py-8">
         <LoadingSpinner message="正在載入交易記錄..." />
@@ -137,38 +183,42 @@
           <p>尚無交易記錄。</p>
           <p class="mt-2">點擊 "新增交易" 按鈕來添加第一筆交易吧！</p>
         </div>
-        <div v-else class="bg-white shadow-md rounded-lg overflow-hidden">
+        <!-- 桌機版 table -->
+        <div
+          class="hidden md:block bg-white shadow-md rounded-lg overflow-hidden"
+        >
           <div class="overflow-x-auto">
             <table class="min-w-full leading-normal">
+              <!-- filepath: c:\Users\yahoo\OneDrive\Desktop\python程式設計\記帳網站\frontend\src\views\Transactions.vue -->
               <thead>
                 <tr>
                   <th
-                    class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
+                    class="px-5 py-3 border-b-2 border-blue-300 bg-blue-50 text-center text-lg font-bold text-blue-700 uppercase tracking-wider"
                   >
                     日期
                   </th>
                   <th
-                    class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
+                    class="px-5 py-3 border-b-2 border-blue-300 bg-blue-50 text-center text-lg font-bold text-blue-700 uppercase tracking-wider"
                   >
                     描述
                   </th>
                   <th
-                    class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
+                    class="px-5 py-3 border-b-2 border-blue-300 bg-blue-50 text-center text-lg font-bold text-blue-700 uppercase tracking-wider"
                   >
                     類別
                   </th>
                   <th
-                    class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
+                    class="px-5 py-3 border-b-2 border-blue-300 bg-blue-50 text-center text-lg font-bold text-blue-700 uppercase tracking-wider"
                   >
                     類型
                   </th>
                   <th
-                    class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
+                    class="px-5 py-3 border-b-2 border-blue-300 bg-blue-50 text-center text-lg font-bold text-blue-700 uppercase tracking-wider"
                   >
                     金額
                   </th>
                   <th
-                    class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider"
+                    class="px-5 py-3 border-b-2 border-blue-300 bg-blue-50 text-center text-lg font-bold text-blue-700 uppercase tracking-wider"
                   >
                     操作
                   </th>
@@ -181,22 +231,22 @@
                   class="hover:bg-gray-50"
                 >
                   <td
-                    class="px-5 py-5 border-b border-gray-200 bg-white text-sm"
+                    class="px-5 py-5 border-b border-gray-200 bg-white text-sm text-center"
                   >
                     {{ transaction.date }}
                   </td>
                   <td
-                    class="px-5 py-5 border-b border-gray-200 bg-white text-sm"
+                    class="px-5 py-5 border-b border-gray-200 bg-white text-sm text-center"
                   >
                     {{ transaction.description || "無描述" }}
                   </td>
                   <td
-                    class="px-5 py-5 border-b border-gray-200 bg-white text-sm"
+                    class="px-5 py-5 border-b border-gray-200 bg-white text-sm text-center"
                   >
                     {{ transaction.category_name }}
                   </td>
                   <td
-                    class="px-5 py-5 border-b border-gray-200 bg-white text-sm"
+                    class="px-5 py-5 border-b border-gray-200 bg-white text-sm text-center"
                   >
                     <span
                       :class="{
@@ -209,7 +259,7 @@
                     </span>
                   </td>
                   <td
-                    class="px-5 py-5 border-b border-gray-200 bg-white text-sm"
+                    class="px-5 py-5 border-b border-gray-200 bg-white text-sm text-center"
                     :class="{
                       'text-green-600': transaction.type === 'income',
                       'text-red-600': transaction.type === 'expense',
@@ -220,10 +270,10 @@
                     }}
                   </td>
                   <td
-                    class="px-5 py-5 border-b border-gray-200 bg-white text-sm"
+                    class="px-5 py-5 border-b border-gray-200 bg-white text-sm text-center"
                   >
                     <div
-                      class="flex flex-col space-y-1 sm:flex-row sm:space-x-2 sm:space-y-0"
+                      class="flex flex-col items-center space-y-1 sm:flex-row sm:space-x-2 sm:space-y-0 justify-center"
                     >
                       <button
                         @click="openEditTransactionModal(transaction)"
@@ -242,6 +292,89 @@
                 </tr>
               </tbody>
             </table>
+          </div>
+          <!-- 分頁控制 -->
+          <div
+            v-if="transactionStore.totalPages > 1"
+            class="flex justify-center items-center space-x-4 py-4 bg-gray-100 rounded-b-lg"
+          >
+            <button
+              @click="changePage(transactionStore.currentPage - 1)"
+              :disabled="!transactionStore.has_prev"
+              class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              上一頁
+            </button>
+            <span class="text-gray-700">
+              第 {{ transactionStore.currentPage }} 頁 / 共
+              {{ transactionStore.totalPages }} 頁 ({{
+                transactionStore.totalTransactions
+              }}
+              筆)
+            </span>
+            <button
+              @click="changePage(transactionStore.currentPage + 1)"
+              :disabled="!transactionStore.has_next"
+              class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              下一頁
+            </button>
+          </div>
+        </div>
+        <!-- 手機版卡片 -->
+        <div class="space-y-4 md:hidden">
+          <div
+            v-for="transaction in transactionStore.transactions"
+            :key="transaction.id"
+            class="bg-white rounded-lg shadow p-4 flex flex-col space-y-2"
+          >
+            <div class="flex justify-between">
+              <span class="font-bold text-gray-700">{{
+                transaction.date
+              }}</span>
+              <span
+                :class="{
+                  'text-green-600': transaction.type === 'income',
+                  'text-red-600': transaction.type === 'expense',
+                }"
+                class="capitalize font-bold"
+              >
+                {{ transaction.type === "income" ? "收入" : "支出" }}
+              </span>
+            </div>
+            <div class="text-gray-600">
+              {{ transaction.description || "無描述" }}
+            </div>
+            <div class="flex justify-between text-sm text-gray-500">
+              <span>類別：{{ transaction.category_name }}</span>
+              <span>
+                金額：
+                <span
+                  :class="{
+                    'text-green-600': transaction.type === 'income',
+                    'text-red-600': transaction.type === 'expense',
+                  }"
+                >
+                  {{ transaction.type === "income" ? "+" : "-" }}${{
+                    transaction.amount.toFixed(2)
+                  }}
+                </span>
+              </span>
+            </div>
+            <div class="flex space-x-4 pt-2">
+              <button
+                @click="openEditTransactionModal(transaction)"
+                class="text-blue-600 hover:text-blue-900"
+              >
+                編輯
+              </button>
+              <button
+                @click="confirmDeleteTransaction(transaction.id)"
+                class="text-red-600 hover:text-red-900"
+              >
+                刪除
+              </button>
+            </div>
           </div>
           <!-- 分頁控制 -->
           <div
@@ -330,6 +463,7 @@ const applyFilters = () => {
   console.log("Applying filters (manually triggered)");
   transactionStore.fetchTransactions(filters, 1); // 應用篩選，回到第一頁
   transactionStore.setCurrentFilters(filters); // 儲存當前篩選條件到 Store
+  transactionStore.fetchSummary(filters);
 };
 
 // 在組件載入時，先獲取類別，然後再獲取交易（因為交易篩選可能需要類別數據）

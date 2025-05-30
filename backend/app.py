@@ -340,7 +340,7 @@ def login():
         login_user(user) # 登入使用者，將使用者資訊儲存在 session 中
         return jsonify({"message": "Logged in successfully", "user": user.to_dict()}), 200
     else:
-        return jsonify({"error": "Invalid username or password"}), 401 # Unauthorized
+        return jsonify({"error": "名稱或密碼錯誤"}), 401 # Unauthorized
 
 @app.route('/api/logout', methods=['GET']) # 確保是 GET 方法
 @login_required
@@ -1265,6 +1265,60 @@ def get_trend_data():
 
     return jsonify(trend_data)
 
+# --- 使用者設定 API ---
+
+@app.route('/api/user/username', methods=['PUT'])
+@login_required
+def update_username():
+    data = request.get_json()
+    new_username = data.get('new_username')
+
+    if not new_username:
+        return jsonify({"error": "新的使用者名稱為必填項"}), 400
+
+    if User.query.filter_by(username=new_username).first():
+        return jsonify({"error": "該使用者名稱已被使用"}), 409 # Conflict
+
+    current_user.username = new_username
+    try:
+        db.session.commit()
+        return jsonify({"message": "使用者名稱更新成功", "user": current_user.to_dict()}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": "使用者名稱更新失敗: " + str(e)}), 500
+
+@app.route('/api/user/password', methods=['PUT'])
+@login_required
+def update_password():
+    data = request.get_json()
+    old_password = data.get('old_password')
+    new_password = data.get('new_password')
+
+    if not old_password or not new_password:
+        return jsonify({"error": "舊密碼和新密碼都為必填項"}), 400
+
+    if not current_user.check_password(old_password):
+        return jsonify({"error": "舊密碼不正確"}), 401 # Unauthorized
+
+    current_user.set_password(new_password)
+    try:
+        db.session.commit()
+        return jsonify({"message": "密碼更新成功"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": "密碼更新失敗: " + str(e)}), 500
+# 假設你用 Flask
+@app.route('/api/transactions/summary')
+def transactions_summary():
+    # 查詢當前登入使用者的收入、支出
+    total_income = db.session.query(func.sum(Transaction.amount)).filter_by(user_id=current_user.id, type='income').scalar() or 0
+    total_expense = db.session.query(func.sum(Transaction.amount)).filter_by(user_id=current_user.id, type='expense').scalar() or 0
+    balance = total_income - total_expense
+    return jsonify({
+        "income": total_income,
+        "expense": total_expense,
+        "balance": balance
+    })
 
 # 運行應用程式
 if __name__ == '__main__':
