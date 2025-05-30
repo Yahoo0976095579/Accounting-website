@@ -1,0 +1,142 @@
+# 💸 記帳網站 (Accounting Web App)
+
+一個功能豐富的個人與群組記帳 Web 應用程式，旨在幫助使用者輕鬆追蹤個人收支，並支援未來擴展的群組協同記帳功能。
+
+## ✨ 主要功能
+
+*   **使用者認證：** 註冊、登入、登出，以及基於會話的安全認證。
+*   **個人記帳：**
+    *   新增、編輯、刪除、查看交易記錄。
+    *   交易列表支持多條件篩選（按類型、類別、日期範圍）和描述搜索。
+    *   交易記錄分頁顯示。
+*   **類別管理：**
+    *   自定義收支類別的增、查、改、刪 (CRUD) 功能。
+*   **儀表板概覽：**
+    *   顯示總收入、總支出和當前結餘。
+    *   以列表形式展示收支趨勢和類別分佈數據。
+*   **使用者體驗優化：**
+    *   Navbar 響應式佈局，小螢幕下自動轉換為漢堡菜單。
+    *   日期篩選器和按鈕的響應式適配。
+    *   友好的載入指示和通知訊息。
+    *   模態框（彈窗）外部點擊不關閉，按鈕居中。
+
+## 🚀 技術棧
+
+### 前端 (Client)
+
+*   **Vue 3 (Composition API)：** 現代化的 JavaScript 框架，用於構建使用者介面。
+*   **Vite：** 極速的前端開發構建工具。
+*   **Pinia：** 輕量且直觀的 Vue 狀態管理庫。
+*   **Vue Router：** Vue 官方路由庫，用於單頁應用程式的導航。
+*   **Axios：** 基於 Promise 的 HTTP 客戶端，用於與後端 API 通信。
+*   **Tailwind CSS (v3.x)：** 實用工具優先的 CSS 框架，用於快速構建響應式 UI。
+
+### 後端 (Server)
+
+*   **Python 3：** 程式語言。
+*   **Flask：** 輕量級的 Python Web 框架，用於構建 RESTful API。
+*   **Flask-SQLAlchemy：** Flask 擴充套件，方便地整合 SQLAlchemy (Python ORM)，用於資料庫操作。
+*   **SQLite：** 輕量級的檔案式資料庫，適合本地開發和小型專案。
+*   **Flask-Login：** 處理使用者會話管理和身份認證。
+*   **Flask-CORS：** 處理前後端跨域請求。
+*   **Werkzeug：** Flask 內建的密碼散列工具。
+*   **python-dotenv：** 從 `.env` 文件載入環境變數。
+
+## 📦 專案結構
+accounting-app/
+├── client/ # Vue.js 前端應用
+│ ├── public/ # 靜態資產
+│ ├── src/
+│ │ ├── assets/ # 圖片、圖標等
+│ │ ├── components/ # 可重用 UI 組件 (e.g., Navbar, LoadingSpinner)
+│ │ ├── router/ # Vue Router 配置
+│ │ ├── stores/ # Pinia 狀態管理模組 (e.g., authStore, transactionStore)
+│ │ ├── views/ # 頁面級組件 (e.g., Login, Dashboard, Transactions)
+│ │ ├── App.vue # Vue 應用程式根組件
+│ │ ├── main.js # Vue 應用程式入口
+│ │ └── style.css # 全局 CSS (Tailwind 導入)
+│ ├── .env.development # 前端開發環境變數 (如果需要)
+│ ├── package.json # 前端依賴和腳本
+│ ├── tailwind.config.js # Tailwind CSS 配置
+│ └── vite.config.js # Vite 配置
+├── server/ # Flask 後端應用
+│ ├── venv/ # Python 虛擬環境 (被 .gitignore 忽略)
+│ ├── app.py # Flask 主應用程式，包含所有 API 和資料庫模型
+│ ├── site.db # SQLite 資料庫檔案 (被 .gitignore 忽略)
+│ ├── .env # 後端環境變數 (被 .gitignore 忽略)
+│ └── requirements.txt # Python 依賴列表
+├── .gitignore # Git 全局忽略文件
+└── README.md # 專案說明文件 (此文件)
+## ⚙️ 如何運行專案
+
+請確保您的電腦上已安裝 Node.js (含 npm) 和 Python 3。
+
+### 1. 克隆專案
+
+```bash
+git clone https://github.com/YourGitHubUsername/your-repo-name.git # 替換為你的 GitHub 倉庫 URL
+cd your-repo-name # 進入專案根目錄
+
+2. 後端設置
+進入後端目錄，創建並激活虛擬環境，然後安裝依賴。
+
+cd server
+
+# 創建並激活虛擬環境
+python -m venv venv
+# Windows:
+.\venv\Scripts\activate
+# macOS/Linux:
+source venv/bin/activate
+
+# 安裝 Python 依賴
+pip install Flask Flask-SQLAlchemy Flask-CORS python-dotenv Flask-Login Werkzeug
+# 建議將依賴保存到 requirements.txt
+pip freeze > requirements.txt
+
+# 創建 .env 文件 (用於環境變數)
+# 在 server/ 目錄下創建一個名為 .env 的文件，並添加以下內容：
+echo "SECRET_KEY=your_super_secret_key_here" > .env
+echo "DATABASE_URL=sqlite:///site.db" >> .env
+# 請將 'your_super_secret_key_here' 替換為一個複雜且隨機的字串。
+# 你可以使用 Python 生成： import os; os.urandom(24).hex()
+
+3. 前端設置
+進入前端目錄，安裝 Node.js 依賴。
+cd ../client # 返回到專案根目錄，然後進入 client
+npm install
+# 確保 Tailwind CSS 及其 PostCSS 插件已安裝且配置正確
+# npm install -D tailwindcss@^3.0.0 postcss autoprefixer
+# npm install -D @tailwindcss/postcss # 如果你使用 Tailwind CSS v4，請安裝這個
+# npx tailwindcss init -p # 重新生成 postcss.config.js 和 tailwind.config.js
+
+4. 運行應用程式
+您需要同時運行後端和前端服務。打開兩個終端機視窗。
+終端機 1 (運行後端)
+cd server
+# 激活虛擬環境 (如果之前沒有激活)
+# Windows: .\venv\Scripts\activate
+# macOS/Linux: source venv/bin/activate
+python app.py
+
+後端服務通常會在 http://localhost:5000 運行。
+終端機 2 (運行前端)
+cd client
+npm run dev
+
+前端開發服務器通常會在 http://localhost:5173 運行。在瀏覽器中訪問此 URL。
+5. 使用應用程式
+打開瀏覽器訪問 http://localhost:5173。
+您可以先進行 註冊 以創建新帳戶。
+登入後，即可開始使用個人記帳功能，並探索儀表板、交易記錄和類別管理頁面。
+💡 未來功能 (群組記帳)
+此專案正在規劃並將逐步實現群組記帳功能，包括：
+創建群組。
+邀請成員加入群組。
+處理群組邀請。
+群組內部的交易記錄與統計。
+群組成員權限管理。
+🤝 貢獻
+歡迎任何形式的貢獻！如果您有任何建議、錯誤報告或功能請求，請隨時開一個 issue。
+📜 許可證
+此專案採用 MIT 許可證。
