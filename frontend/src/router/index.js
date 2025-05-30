@@ -11,6 +11,7 @@ import Categories from "../views/Categories.vue";
 import NotFound from "../views/NotFound.vue"; // 可選的 404 頁面
 import Groups from "../views/Groups.vue"; // <-- 新增導入
 import GroupDetails from "../views/GroupDetails.vue"; // <-- 新增導入
+import Settings from "../views/Settings.vue"; // <-- 新增導入
 
 const routes = [
   {
@@ -60,6 +61,12 @@ const routes = [
     path: "/groups/:id", // 動態路由參數 :id 用於群組ID
     name: "GroupDetails",
     component: GroupDetails,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/settings",
+    name: "Settings",
+    component: Settings,
     meta: { requiresAuth: true },
   },
 ];
