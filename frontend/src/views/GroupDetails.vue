@@ -32,27 +32,46 @@
     </div>
     <div v-else>
       <!-- 群組概覽卡片 -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <div class="bg-white p-6 rounded-lg shadow-md text-center">
-          <h2 class="text-xl font-semibold mb-2 text-gray-700">群組總收入</h2>
-          <p class="text-green-600 text-4xl font-bold">
+      <!-- filepath: c:\Users\yahoo\OneDrive\Desktop\python程式設計\記帳網站\frontend\src\views\GroupDetails.vue -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
+        <div
+          class="bg-white p-3 sm:p-6 rounded-md sm:rounded-lg shadow text-center"
+        >
+          <h2
+            class="text-base sm:text-xl font-semibold mb-1 sm:mb-2 text-gray-700"
+          >
+            群組總收入
+          </h2>
+          <p class="text-green-600 text-2xl sm:text-4xl font-bold">
             ${{ groupTransactionStore.groupSummary.total_income.toFixed(2) }}
           </p>
         </div>
-        <div class="bg-white p-6 rounded-lg shadow-md text-center">
-          <h2 class="text-xl font-semibold mb-2 text-gray-700">群組總支出</h2>
-          <p class="text-red-600 text-4xl font-bold">
+        <div
+          class="bg-white p-3 sm:p-6 rounded-md sm:rounded-lg shadow text-center"
+        >
+          <h2
+            class="text-base sm:text-xl font-semibold mb-1 sm:mb-2 text-gray-700"
+          >
+            群組總支出
+          </h2>
+          <p class="text-red-600 text-2xl sm:text-4xl font-bold">
             ${{ groupTransactionStore.groupSummary.total_expense.toFixed(2) }}
           </p>
         </div>
-        <div class="bg-white p-6 rounded-lg shadow-md text-center">
-          <h2 class="text-xl font-semibold mb-2 text-gray-700">群組結餘</h2>
+        <div
+          class="bg-white p-3 sm:p-6 rounded-md sm:rounded-lg shadow text-center"
+        >
+          <h2
+            class="text-base sm:text-xl font-semibold mb-1 sm:mb-2 text-gray-700"
+          >
+            群組結餘
+          </h2>
           <p
             :class="{
               'text-blue-600': groupTransactionStore.groupSummary.balance >= 0,
               'text-orange-600': groupTransactionStore.groupSummary.balance < 0,
             }"
-            class="text-4xl font-bold"
+            class="text-2xl sm:text-4xl font-bold"
           >
             ${{ groupTransactionStore.groupSummary.balance.toFixed(2) }}
           </p>

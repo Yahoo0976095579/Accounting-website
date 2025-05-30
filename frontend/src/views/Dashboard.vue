@@ -31,15 +31,20 @@
     </div>
     <div v-else>
       <!-- 總覽卡片 -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+      <!-- filepath: c:\Users\yahoo\OneDrive\Desktop\python程式設計\記帳網站\frontend\src\views\Dashboard.vue -->
+      <!-- filepath: c:\Users\yahoo\OneDrive\Desktop\python程式設計\記帳網站\frontend\src\views\Dashboard.vue -->
+      <div
+        class="grid grid-cols-2 grid-rows-2 gap-3 sm:grid-cols-2 sm:grid-rows-2 lg:grid-cols-3 lg:grid-rows-1 sm:gap-4 lg:gap-6 mb-6 lg:mb-10"
+      >
+        <!-- 總收入 -->
         <div
-          class="bg-gradient-to-br from-green-100 to-green-50 p-8 rounded-2xl shadow-lg text-center hover:scale-105 transition"
+          class="bg-gradient-to-br from-green-100 to-green-50 p-4 sm:p-6 lg:p-8 rounded-lg sm:rounded-xl lg:rounded-2xl shadow text-center hover:scale-105 transition col-span-1 row-span-1"
         >
           <h2
-            class="text-lg font-semibold mb-2 text-green-700 flex items-center justify-center gap-2"
+            class="text-base sm:text-lg font-semibold mb-1 sm:mb-2 text-green-700 flex items-center justify-center gap-2"
           >
             <svg
-              class="w-5 h-5 text-green-400"
+              class="w-4 h-4 sm:w-5 sm:h-5 text-green-400"
               fill="none"
               stroke="currentColor"
               stroke-width="2"
@@ -50,18 +55,21 @@
             </svg>
             總收入
           </h2>
-          <p class="text-green-600 text-4xl font-extrabold tracking-wide">
+          <p
+            class="text-green-600 text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-wide"
+          >
             ${{ summaryStore.totalIncome.toFixed(2) }}
           </p>
         </div>
+        <!-- 總支出 -->
         <div
-          class="bg-gradient-to-br from-red-100 to-red-50 p-8 rounded-2xl shadow-lg text-center hover:scale-105 transition"
+          class="bg-gradient-to-br from-red-100 to-red-50 p-4 sm:p-6 lg:p-8 rounded-lg sm:rounded-xl lg:rounded-2xl shadow text-center hover:scale-105 transition col-span-1 row-span-1"
         >
           <h2
-            class="text-lg font-semibold mb-2 text-red-700 flex items-center justify-center gap-2"
+            class="text-base sm:text-lg font-semibold mb-1 sm:mb-2 text-red-700 flex items-center justify-center gap-2"
           >
             <svg
-              class="w-5 h-5 text-red-400"
+              class="w-4 h-4 sm:w-5 sm:h-5 text-red-400"
               fill="none"
               stroke="currentColor"
               stroke-width="2"
@@ -72,18 +80,21 @@
             </svg>
             總支出
           </h2>
-          <p class="text-red-600 text-4xl font-extrabold tracking-wide">
+          <p
+            class="text-red-600 text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-wide"
+          >
             ${{ summaryStore.totalExpense.toFixed(2) }}
           </p>
         </div>
+        <!-- 總結餘 -->
         <div
-          class="bg-gradient-to-br from-blue-100 to-blue-50 p-8 rounded-2xl shadow-lg text-center hover:scale-105 transition"
+          class="bg-gradient-to-br from-blue-100 to-blue-50 p-4 sm:p-6 lg:p-8 rounded-lg sm:rounded-xl lg:rounded-2xl shadow text-center hover:scale-105 transition col-span-2 row-span-1 sm:col-span-2 sm:row-span-1 lg:col-span-1 lg:row-span-1 flex flex-col justify-center"
         >
           <h2
-            class="text-lg font-semibold mb-2 text-blue-700 flex items-center justify-center gap-2"
+            class="text-base sm:text-lg font-semibold mb-1 sm:mb-2 text-blue-700 flex items-center justify-center gap-2"
           >
             <svg
-              class="w-5 h-5 text-blue-400"
+              class="w-4 h-4 sm:w-5 sm:h-5 text-blue-400"
               fill="none"
               stroke="currentColor"
               stroke-width="2"
@@ -98,7 +109,7 @@
             :class="
               summaryStore.balance >= 0 ? 'text-blue-600' : 'text-orange-600'
             "
-            class="text-4xl font-extrabold tracking-wide"
+            class="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-wide"
           >
             ${{ summaryStore.balance.toFixed(2) }}
           </p>
@@ -389,19 +400,19 @@
                   item.period
                 }}</span>
                 <div
-                  class="flex flex-col md:flex-row md:items-center gap-2 md:gap-6 flex-1 justify-end"
+                  class="flex flex-row flex-wrap items-center gap-x-4 gap-y-1 md:gap-x-6 flex-1 justify-end"
                 >
-                  <span class="text-green-600 font-semibold"
-                    >收入: ${{ item.income.toFixed(2) }}</span
-                  >
-                  <span class="text-red-600 font-semibold"
-                    >支出: ${{ item.expense.toFixed(2) }}</span
-                  >
+                  <span class="text-green-600 font-semibold whitespace-nowrap">
+                    收入: ${{ item.income.toFixed(2) }}
+                  </span>
+                  <span class="text-red-600 font-semibold whitespace-nowrap">
+                    支出: ${{ item.expense.toFixed(2) }}
+                  </span>
                   <span
                     :class="
                       item.balance >= 0 ? 'text-blue-600' : 'text-orange-600'
                     "
-                    class="font-bold"
+                    class="font-bold whitespace-nowrap"
                   >
                     結餘: ${{ item.balance.toFixed(2) }}
                   </span>
