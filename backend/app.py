@@ -19,6 +19,10 @@ app.config['SESSION_COOKIE_SECURE'] = True
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your_development_secret_key_please_change_me') # 確保這裡的值在 .env 中設置
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///site.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config.update(
+    SESSION_COOKIE_SAMESITE='None',
+    SESSION_COOKIE_SECURE=True
+)
 
 # 啟用 CORS，允許前端應用程式訪問
 # 在開發階段，可以允許所有來源。生產環境中，請限制為你的前端域名。
@@ -1212,10 +1216,11 @@ def get_category_breakdown():
     return jsonify(summary_by_category)
 
 
+
 @app.route('/api/summary/trend', methods=['GET'])
 @login_required
 def get_trend_data():
-    interval = request.args.get('interval', 'month') # 'day', 'week', 'month'
+    interval = request.args.get('interval', 'month')
     start_date_str = request.args.get('start_date')
     end_date_str = request.args.get('end_date')
 
@@ -1236,17 +1241,14 @@ def get_trend_data():
 
     # 根據 interval 進行分組
     if interval == 'day':
-        group_by_col = func.strftime('%Y-%m-%d', Transaction.date)
+        group_by_col = func.to_char(Transaction.date, 'YYYY-MM-DD')
     elif interval == 'week':
-        # SQLite 的 strftime 處理週數可能複雜，這裡用日期範圍來模擬
-        # 更精確的週數計算可能需要自定義函數或更複雜的 SQL
-        group_by_col = func.strftime('%Y-%W', Transaction.date) # YYYY-WW (週數從0開始)
+        group_by_col = func.to_char(Transaction.date, 'IYYY-IW')  # ISO週
     elif interval == 'month':
-        group_by_col = func.strftime('%Y-%m', Transaction.date)
+        group_by_col = func.to_char(Transaction.date, 'YYYY-MM')
     else:
         return jsonify({"error": "Invalid interval. Must be 'day', 'week', or 'month'."}), 400
 
-    # 聚合收入和支出
     income_data = query.with_entities(
         group_by_col.label('period'),
         func.sum(Transaction.amount)
@@ -1257,11 +1259,9 @@ def get_trend_data():
         func.sum(Transaction.amount)
     ).filter(Transaction.type == 'expense').group_by('period').order_by('period').all()
 
-    # 將結果轉換為字典，方便前端處理
     income_map = {item.period: item[1] for item in income_data}
     expense_map = {item.period: item[1] for item in expense_data}
 
-    # 合併結果並填充缺失的時期
     all_periods = sorted(list(set(income_map.keys()) | set(expense_map.keys())))
 
     trend_data = []
