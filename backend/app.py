@@ -7,6 +7,7 @@ from datetime import datetime, date, timedelta
 from sqlalchemy import func, extract, UniqueConstraint # <-- 確保這裡有 UniqueConstraint
 import os
 from dotenv import load_dotenv
+import re
 
 # 載入 .env 檔案中的環境變數
 load_dotenv()
@@ -20,9 +21,11 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # 啟用 CORS，允許前端應用程式訪問
 # 在開發階段，可以允許所有來源。生產環境中，請限制為你的前端域名。
-CORS(app, supports_credentials=True, origins=["https://accounting-website-j8a3.vercel.app"]) # supports_credentials=True 允許發送 cookie/會話憑證
+#CORS(app, supports_credentials=True, origins=["https://accounting-website-j8a3.vercel.app"]) # supports_credentials=True 允許發送 cookie/會話憑證
 #, origins=["https://accounting-website-j8a3.vercel.app/"]
 # --- 資料庫初始化 ---
+CORS(app, supports_credentials=True, origins=re.compile(r"https://accounting-website-.*\.vercel\.app"))
+
 db = SQLAlchemy(app)    
 
 # --- Flask-Login 初始化 ---
