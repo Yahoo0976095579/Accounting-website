@@ -44,7 +44,7 @@ def load_user(user_id):
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
-    password_hash = db.Column(db.String(128), nullable=False)
+    password_hash = db.Column(db.String(512), nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     is_active = db.Column(db.Boolean, nullable=False, default=True) # <-- 確保這行存在並設置為 True
 
