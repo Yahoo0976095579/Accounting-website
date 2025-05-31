@@ -3,8 +3,7 @@ import { defineStore } from "pinia";
 import axios from "axios";
 import router from "../router/index.js"; // 導入 router，用於登入後重定向
 import { useNotificationStore } from "./notificationStore"; // 根據你的 notificationStore 實際路徑
-
-const API_BASE_URL = "https://accounting-website-1.onrender.com/api"; // 後端 API 基礎 URL
+import { API_BASE_URL } from "./stores/config";
 
 export const useAuthStore = defineStore("auth", {
   state: () => ({

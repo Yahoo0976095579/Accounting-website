@@ -2,7 +2,7 @@
 import { defineStore } from "pinia";
 import axios from "axios";
 
-const API_BASE_URL = "https://accounting-website-1.onrender.com/api";
+import { API_BASE_URL } from "./stores/config";
 
 export const useSummaryStore = defineStore("summary", {
   state: () => ({
