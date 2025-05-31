@@ -20,7 +20,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # 啟用 CORS，允許前端應用程式訪問
 # 在開發階段，可以允許所有來源。生產環境中，請限制為你的前端域名。
-CORS(app, supports_credentials=True, origins=["https://accounting-website-j8a3.vercel.app/"]) # supports_credentials=True 允許發送 cookie/會話憑證
+CORS(app, supports_credentials=True, origins=["https://accounting-website-j8a3.vercel.app"]) # supports_credentials=True 允許發送 cookie/會話憑證
 #, origins=["https://accounting-website-j8a3.vercel.app/"]
 # --- 資料庫初始化 ---
 db = SQLAlchemy(app)    
