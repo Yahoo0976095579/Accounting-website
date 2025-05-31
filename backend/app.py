@@ -305,6 +305,7 @@ def register():
         return jsonify({"message": "User registered and logged in successfully", "user": new_user.to_dict()}), 201
     except Exception as e:
         db.session.rollback()
+        print("Registration failed:", e)  # 這行會印出詳細錯誤到 log
         return jsonify({"error": "Registration failed: " + str(e)}), 500
 
 # server/app.py 中的 add_default_categories_for_user 函數
