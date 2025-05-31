@@ -14,7 +14,7 @@ load_dotenv()
 
 app = Flask(__name__)
 app.config['SESSION_COOKIE_SAMESITE'] = "None"
-app.config['SESSION_COOKIE_SECURE'] = False
+app.config['SESSION_COOKIE_SECURE'] = True
 # --- Flask 配置 ---
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your_development_secret_key_please_change_me') # 確保這裡的值在 .env 中設置
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///site.db')
