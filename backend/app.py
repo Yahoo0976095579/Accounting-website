@@ -42,7 +42,10 @@ def load_user(user_id):
     # 推薦的 SQLAlchemy 2.0 寫法
     # 注意：db.session.get() 直接接收主鍵，且不需要 Query 物件
     return db.session.get(User, int(user_id))
-
+# ✅ 未登入時回傳 JSON 錯誤，而不是重定向
+@login_manager.unauthorized_handler
+def unauthorized():
+    return jsonify({'error': '未登入，請先登入'}), 401
 # --- 資料庫模型定義 ---
 
 # server/app.py (在 User 模型內部)
