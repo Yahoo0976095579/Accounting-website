@@ -2,7 +2,7 @@
 import { defineStore } from "pinia";
 import axios from "axios";
 import { useNotificationStore } from "./notificationStore";
-import { API_BASE_URL } from "./stores/config";
+import { API_BASE_URL } from "./config";
 
 export const useCategoryStore = defineStore("category", {
   state: () => ({
