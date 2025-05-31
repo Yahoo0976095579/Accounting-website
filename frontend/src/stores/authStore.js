@@ -4,7 +4,7 @@ import axios from "axios";
 import router from "../router/index.js"; // 導入 router，用於登入後重定向
 import { useNotificationStore } from "./notificationStore"; // 根據你的 notificationStore 實際路徑
 
-const API_BASE_URL = "https://accounting-website-60a8.onrender.com/api"; // 後端 API 基礎 URL
+const API_BASE_URL = "https://accounting-website-2.onrender.com/api"; // 後端 API 基礎 URL
 
 export const useAuthStore = defineStore("auth", {
   state: () => ({
