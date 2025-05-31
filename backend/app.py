@@ -13,9 +13,8 @@ import re
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = os.getenv("SECRET_KEY")
 app.config['SESSION_COOKIE_SAMESITE'] = "None"
-app.config['SESSION_COOKIE_SECURE'] = True
+app.config['SESSION_COOKIE_SECURE'] = False
 # --- Flask 配置 ---
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your_development_secret_key_please_change_me') # 確保這裡的值在 .env 中設置
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///site.db')
@@ -346,7 +345,9 @@ def login():
     user = User.query.filter_by(username=username).first()
 
     if user and user.check_password(password):
+        
         login_user(user) # 登入使用者，將使用者資訊儲存在 session 中
+        session.modified = True  # 告訴 flask session 有修改
         return jsonify({"message": "Logged in successfully", "user": user.to_dict()}), 200
     else:
         return jsonify({"error": "名稱或密碼錯誤"}), 401 # Unauthorized
