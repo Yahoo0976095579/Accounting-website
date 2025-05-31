@@ -1310,6 +1310,7 @@ def update_password():
         return jsonify({"error": "密碼更新失敗: " + str(e)}), 500
 # 假設你用 Flask
 @app.route('/api/transactions/summary')
+@login_required
 def transactions_summary():
     # 查詢當前登入使用者的收入、支出
     total_income = db.session.query(func.sum(Transaction.amount)).filter_by(user_id=current_user.id, type='income').scalar() or 0
