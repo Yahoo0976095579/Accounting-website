@@ -6,7 +6,7 @@
       <!-- 返回我的群組按鈕 -->
       <button
         @click="$router.back()"
-        class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-3 rounded transition duration-200 ease-in-out text-sm sm:text-base mx-auto"
+        class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded transition duration-200 ease-in-out text-sm sm:text-base"
       >
         ← 返回我的群組
       </button>
@@ -15,7 +15,7 @@
       <button
         v-if="groupStore.currentGroup?.your_role === 'admin'"
         @click="confirmDeleteGroup"
-        class="bg-red-600 hover:bg-red-800 text-white font-bold py-2 px-4 rounded text-sm sm:text-base transition duration-200 ease-in-out flex-grow sm:flex-grow-0"
+        class="bg-red-600 hover:bg-red-800 text-white font-bold py-2 px-4 rounded text-sm sm:text-base transition duration-200 ease-in-out"
       >
         刪除群組
       </button>
