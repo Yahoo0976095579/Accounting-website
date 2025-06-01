@@ -14,10 +14,23 @@ export const useAuthStore = defineStore("auth", {
     isAuthenticated: (state) => !!state.user,
   },
   actions: {
-    // 取得 JWT token 的 header
     getAuthHeaders() {
       const token = localStorage.getItem("access_token");
       return token ? { Authorization: `Bearer ${token}` } : {};
+    },
+
+    // 新增的初始化動作
+    async initializeAuth() {
+      const token = localStorage.getItem("access_token");
+      if (token && !this.user) {
+        // 如果有 token 但 user 狀態是空的 (例如，刷新頁面)
+        console.log("Initializing auth: Token found, fetching user profile...");
+        await this.fetchCurrentUser(); // 嘗試從後端獲取用戶資料
+      } else if (this.user) {
+        console.log("Initializing auth: User data already present.");
+      } else {
+        console.log("Initializing auth: No token or user data found.");
+      }
     },
 
     async register(username, password) {
@@ -28,15 +41,22 @@ export const useAuthStore = defineStore("auth", {
           username,
           password,
         });
-        // 註冊後直接登入，取得 token
         const token = response.data.access_token;
         if (token) {
           localStorage.setItem("access_token", token);
+          // 註冊後，如果後端返回了完整的 user 物件，則直接設置
+          // 如果沒有，你可能需要再調用 fetchCurrentUser()
+          this.user = response.data.user; // 假設後端註冊成功後也返回了 user 資訊
+          localStorage.setItem("user", JSON.stringify(this.user));
+          router.push("/");
+          return true;
+        } else {
+          // 如果註冊成功但沒返回 token，可能需要手動登入一次
+          console.warn(
+            "Register success but no token returned. Attempting login."
+          );
+          return await this.login(username, password); // 嘗試登入
         }
-        this.user = response.data.user;
-        localStorage.setItem("user", JSON.stringify(this.user));
-        router.push("/");
-        return true;
       } catch (err) {
         this.error = err.response?.data?.error || "Registration failed.";
         console.error("Registration error:", err);
@@ -58,6 +78,7 @@ export const useAuthStore = defineStore("auth", {
         if (token) {
           localStorage.setItem("access_token", token);
         }
+        // 確保這裡的 response.data.user 包含群組 ID
         this.user = response.data.user;
         localStorage.setItem("user", JSON.stringify(this.user));
         router.push("/");
@@ -76,12 +97,10 @@ export const useAuthStore = defineStore("auth", {
       this.isLoading = true;
       this.error = null;
       try {
-        // 後端只是回傳訊息，前端直接清除 token
         await axios.get(`${API_BASE_URL}/logout`, {
           headers: this.getAuthHeaders(),
         });
       } catch (err) {
-        // 即使失敗也要清理前端狀態
         this.error = err.response?.data?.error || "Logout failed.";
         console.error("Logout error:", err);
       } finally {
@@ -100,7 +119,7 @@ export const useAuthStore = defineStore("auth", {
         const response = await axios.get(`${API_BASE_URL}/user`, {
           headers: this.getAuthHeaders(),
         });
-        this.user = response.data;
+        this.user = response.data; // 這裡的 response.data 必須包含群組 ID
         localStorage.setItem("user", JSON.stringify(this.user));
         return true;
       } catch (err) {
@@ -111,7 +130,7 @@ export const useAuthStore = defineStore("auth", {
         } else {
           console.error("Failed to fetch current user:", err);
         }
-        this.user = null;
+        this.user = null; // 獲取失敗則清除用戶資料
         localStorage.removeItem("user");
         localStorage.removeItem("access_token");
         return false;
@@ -120,6 +139,7 @@ export const useAuthStore = defineStore("auth", {
       }
     },
 
+    // ... (其他更新用戶資訊的動作不變)
     async updateUsername(newUsername) {
       this.isLoading = true;
       this.error = null;
@@ -131,7 +151,7 @@ export const useAuthStore = defineStore("auth", {
             headers: this.getAuthHeaders(),
           }
         );
-        this.user = response.data.user;
+        this.user = response.data.user; // 更新後的 user 資料
         localStorage.setItem("user", JSON.stringify(this.user));
         useNotificationStore().showNotification(
           "使用者名稱更新成功！",
