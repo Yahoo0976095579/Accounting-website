@@ -594,7 +594,10 @@
 
 <script setup>
 // ... (script setup 內容與之前相同，不需要修改) ...
-import { ref, onMounted, reactive, watch } from "vue";
+// === 修正點：確保從 'vue' 導入 computed ===
+import { ref, onMounted, reactive, watch, computed } from "vue";
+// ==========================================
+
 import { useRoute } from "vue-router";
 import { useGroupStore } from "../stores/groupStore";
 import { useGroupTransactionStore } from "../stores/groupTransactionStore";
