@@ -12,7 +12,7 @@
           {{ title }}
         </h3>
         <div class="mt-2">
-          <p class="text-sm text-gray-500">
+          <p class="text-gray-700 whitespace-pre-line">
             {{ message }}
           </p>
         </div>
