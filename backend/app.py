@@ -550,7 +550,7 @@ def leave_group(group_id):
 @app.route('/api/groups/<int:group_id>/invite', methods=['POST'])
 @jwt_required()
 def invite_member(group_id):
-    # 檢查使用者是否為群組管理員
+    # 檢查使用者是否為群組管理員 (這部分不變)
     group_member = GroupMember.query.filter_by(group_id=group_id, user_id=get_jwt_identity(), role='admin', status='accepted').first()
     if not group_member:
         return jsonify({"error": "群組未找到或您無權邀請成員"}), 403
@@ -567,44 +567,54 @@ def invite_member(group_id):
     if invited_user.id == get_jwt_identity():
         return jsonify({"error": "不能邀請自己"}), 400
 
-    # === 修正點：更全面的檢查 ===
+    # === 修正點：重新設計檢查和邀請邏輯 ===
 
-    # 1. 檢查是否已經是群組的活躍成員
-    existing_group_member = GroupMember.query.filter_by(group_id=group_id, user_id=invited_user.id, status='accepted').first()
-    if existing_group_member:
+    # 1. 檢查是否已經是群組的活躍成員 (status='accepted')
+    existing_active_member = GroupMember.query.filter_by(
+        group_id=group_id,
+        user_id=invited_user.id,
+        status='accepted'
+    ).first()
+    if existing_active_member:
         return jsonify({"error": "該使用者已是群組的活躍成員"}), 409
 
-    # 2. 檢查是否已有任何狀態的邀請記錄（包括 pending, accepted, rejected）
-    # 因為 UniqueConstraint 是針對 (group_id, invited_user_id) 的，所以只要有任何一條就不能再創建
-    existing_invitation = Invitation.query.filter_by(group_id=group_id, invited_user_id=invited_user.id).first()
-    if existing_invitation:
-        if existing_invitation.status == 'pending':
-            return jsonify({"error": "已存在對該使用者的待處理邀請"}), 409
-        elif existing_invitation.status == 'accepted':
-            # 理論上這個應該被上面的 GroupMember 檢查捕獲，但以防萬一
-            return jsonify({"error": "該使用者已接受過此群組邀請"}), 409
-        elif existing_invitation.status == 'rejected':
-            return jsonify({"error": "該使用者已拒絕過此群組邀請"}), 409
-        # 如果未來有其他狀態，可以繼續添加判斷
-
-    # === 結束修正點 ===
-
-    new_invitation = Invitation(
+    # 2. 檢查是否存在任何狀態的邀請記錄（包括 pending, accepted, rejected）
+    # 因為 UniqueConstraint 是針對 (group_id, invited_user_id) 的，所以只會有一條
+    existing_invitation = Invitation.query.filter_by(
         group_id=group_id,
-        invited_by_user_id=get_jwt_identity(),
-        invited_user_id=invited_user.id,
-        status='pending'
-    )
+        invited_user_id=invited_user.id
+    ).first()
+
     try:
-        db.session.add(new_invitation)
-        db.session.commit()
-        return jsonify({"message": f"已成功向 {invited_username} 發送邀請"}), 201
+        if existing_invitation:
+            # 如果已有邀請記錄存在
+            if existing_invitation.status == 'pending':
+                # 如果是待處理狀態，則不允許重複發送
+                return jsonify({"error": "已存在對該使用者的待處理邀請"}), 409
+            else:
+                # 如果是 'rejected' 或 'accepted' (用戶後來被移除的情況)，則更新為 'pending'
+                existing_invitation.status = 'pending'
+                existing_invitation.created_at = datetime.utcnow() # 更新發送時間
+                existing_invitation.invited_by_user_id = get_jwt_identity() # 更新邀請者
+                existing_invitation.expires_at = None # 清除過期時間（如果適用）
+                db.session.commit()
+                return jsonify({"message": f"已成功重新邀請 {invited_username} 加入群組！"}), 200 # 返回 200 表示更新成功
+        else:
+            # 如果沒有任何邀請記錄，則創建一條新的待處理邀請
+            new_invitation = Invitation(
+                group_id=group_id,
+                invited_by_user_id=get_jwt_identity(),
+                invited_user_id=invited_user.id,
+                status='pending'
+            )
+            db.session.add(new_invitation)
+            db.session.commit()
+            return jsonify({"message": f"已成功向 {invited_username} 發送邀請"}), 201 # 返回 201 表示創建成功
     except Exception as e:
         db.session.rollback()
-        # 捕捉 UniqueViolation 錯誤並返回自定義訊息
-        if "duplicate key value violates unique constraint" in str(e):
-             return jsonify({"error": "邀請失敗：該使用者已在群組中或已有邀請記錄。"}), 409
-        print(f"發送邀請失敗: {e}")
+        # 通常，在上述邏輯正確的情況下，不應該再觸發 UniqueViolation 錯誤
+        # 但為了保險，保留通用錯誤捕獲
+        print(f"發送邀請失敗 (後端異常): {e}")
         return jsonify({"error": "發送邀請失敗: " + str(e)}), 500
 
 @app.route('/api/invitations', methods=['GET'])
