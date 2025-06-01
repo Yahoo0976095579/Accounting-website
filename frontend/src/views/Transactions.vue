@@ -144,18 +144,19 @@
           />
         </div>
         <!-- 搜尋/重置按鈕 -->
+        <!-- 搜尋/重置按鈕 -->
         <div class="col-span-full flex flex-row gap-2 pt-2">
           <button
             @click="applyFilters"
             type="button"
-            class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm transition duration-200 ease-in-out flex-1"
+            class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm transition duration-200 ease-in-out flex-1 md:flex-none md:w-auto md:max-w-[120px]"
           >
             搜尋
           </button>
           <button
             @click="resetFilters"
             type="button"
-            class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm transition duration-200 ease-in-out flex-1"
+            class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm transition duration-200 ease-in-out flex-1 md:flex-none md:w-auto md:max-w-[120px]"
           >
             重置篩選
           </button>
@@ -163,10 +164,10 @@
       </div>
 
       <!-- 新增交易按鈕 -->
-      <div class="mb-6">
+      <div class="flex justify-center mb-6">
         <button
           @click="openAddTransactionModal"
-          class="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-base transition duration-200 ease-in-out"
+          class="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-base transition duration-200 ease-in-out md:w-auto md:max-w-[160px]"
         >
           新增交易
         </button>
