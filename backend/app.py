@@ -879,7 +879,7 @@ def get_group_trend_data(group_id):
     if not group_member:
         return jsonify({"error": "群組未找到或您不是該群組成員"}), 404
 
-    interval = request.args.get('interval', 'month') # 'day', 'week', 'month'
+    interval = request.args.get('interval', 'month')
     start_date_str = request.args.get('start_date')
     end_date_str = request.args.get('end_date')
 
@@ -902,8 +902,7 @@ def get_group_trend_data(group_id):
     if interval == 'day':
         group_by_col = func.to_char(GroupTransaction.date, 'YYYY-MM-DD')
     elif interval == 'week':
-        # PostgreSQL 的 ISO 週格式為 IYYY-IW
-        group_by_col = func.to_char(GroupTransaction.date, 'IYYY-IW')
+        group_by_col = func.to_char(GroupTransaction.date, 'IYYY-IW') # PostgreSQL 的 ISO 週格式
     elif interval == 'month':
         group_by_col = func.to_char(GroupTransaction.date, 'YYYY-MM')
     else:
@@ -1282,7 +1281,7 @@ def get_trend_data():
     if interval == 'day':
         group_by_col = func.to_char(Transaction.date, 'YYYY-MM-DD')
     elif interval == 'week':
-        group_by_col = func.to_char(Transaction.date, 'IYYY-IW') # PostgreSQL 的 ISO 週格式
+        group_by_col = func.to_char(Transaction.date, 'IYYY-IW')
     elif interval == 'month':
         group_by_col = func.to_char(Transaction.date, 'YYYY-MM')
     else:

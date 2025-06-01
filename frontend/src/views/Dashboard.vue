@@ -552,9 +552,14 @@ import { ref, onMounted, reactive, watch } from "vue";
 import { useAuthStore } from "../stores/authStore";
 import { useSummaryStore } from "../stores/summaryStore";
 import LoadingSpinner from "../components/LoadingSpinner.vue";
+// import router from '../router'; // 如果你不再需要強制重定向，可以移除此導入
 
 const authStore = useAuthStore();
 const summaryStore = useSummaryStore();
+
+// 新增一個響應式變數來儲存當前選中的群組ID
+// 如果為 null，表示顯示個人數據；如果為數字，表示顯示該群組數據。
+const selectedGroupId = ref(null); // 預設為 null (個人模式)
 
 const chartFilters = reactive({
   interval: "month",
@@ -562,41 +567,43 @@ const chartFilters = reactive({
   end_date: "",
 });
 
-let isInitialDataLoaded = false; // 用於確保只在用戶數據載入後調用一次
+let isInitialDataLoaded = false;
 
 // 統一的數據載入函數
 async function loadDashboardData() {
-  const currentGroupId =
-    authStore.user?.default_group_id || authStore.user?.groups?.[0]?.id;
-
-  if (!currentGroupId) {
-    console.error(
-      "無法獲取群組 ID，無法載入儀表板資料。請確認用戶已登入且有群組資訊。"
-    );
-    summaryStore.fetchError =
-      "Group ID is missing. Please select or create a group.";
-    return;
-  }
-
   console.log(
-    `Loading dashboard data for group ID: ${currentGroupId} with filters:`,
-    chartFilters
+    `Loading dashboard data. Current Mode: ${
+      selectedGroupId.value ? "Group" : "Personal"
+    }`
   );
+  console.log(`Current Group ID: ${selectedGroupId.value}`);
+  console.log("Filters:", chartFilters);
 
+  // 將 selectedGroupId 傳遞給 summaryStore 的 loadAllDashboardData
   try {
-    await summaryStore.loadAllDashboardData(currentGroupId, chartFilters);
+    await summaryStore.loadAllDashboardData(
+      selectedGroupId.value,
+      chartFilters
+    );
     console.log("Dashboard data loaded.");
   } catch (err) {
     console.error("Load all dashboard data error:", err);
+    // 這裡可以根據需要顯示錯誤訊息給用戶，但不再強制重定向
   }
 }
 
-// 修正點：在應用程式掛載時，先嘗試初始化 authStore
+// 當用戶登入後，或者頁面刷新時，判斷是否需要載入個人數據。
+// 如果用戶有預設群組，可以考慮將其設置為 selectedGroupId 的預設值
+// (如果你的業務邏輯是預設展示用戶的第一個群組數據，而非個人數據)
 onMounted(async () => {
   console.log("Dashboard onMounted: Component mounted.");
-  await authStore.initializeAuth(); // 嘗試從 localStorage 獲取 token 並從後端獲取用戶資料
+  await authStore.initializeAuth(); // 確保 authStore.user 被載入
 
-  // watch 會監聽 authStore.user 的變化，一旦有值就會觸發 loadDashboardData
+  // 在這裡可以根據 authStore.user 的群組資訊，決定 selectedGroupId 的初始值
+  // 例如：
+  // if (authStore.user && authStore.user.default_group_id) {
+  //   selectedGroupId.value = authStore.user.default_group_id;
+  // }
 });
 
 // 使用 watch 來監聽 authStore.user 的變化
@@ -604,17 +611,47 @@ watch(
   () => authStore.user,
   (newUser) => {
     if (newUser && !isInitialDataLoaded) {
-      // 確保 newUser 有值且只執行一次初始載入
       console.log("authStore.user detected, loading dashboard data...");
-      loadDashboardData();
-      isInitialDataLoaded = true; // 標記為已載入
+
+      // 如果用戶有預設群組，可以考慮將其設置為 selectedGroupId 的初始值
+      // 這樣在某些情況下可以預設顯示其第一個群組的數據
+      if (newUser.default_group_id) {
+        selectedGroupId.value = newUser.default_group_id;
+        console.log(
+          `Setting default selected group ID: ${selectedGroupId.value}`
+        );
+      } else if (newUser.groups && newUser.groups.length > 0) {
+        selectedGroupId.value = newUser.groups[0].id;
+        console.log(
+          `Setting default selected group ID from groups list: ${selectedGroupId.value}`
+        );
+      } else {
+        // 如果用戶沒有任何群組，selectedGroupId 保持為 null，表示個人模式
+        selectedGroupId.value = null;
+        console.log("No default group found, displaying personal data.");
+      }
+
+      loadDashboardData(); // 觸發數據載入
+      isInitialDataLoaded = true;
     }
   },
   { immediate: true }
-); // immediate: true 會讓 watch 在組件掛載時立即執行一次
+);
 
 const resetChartFilters = () => {
   chartFilters.start_date = "";
   chartFilters.end_date = "";
 };
+
+// 你可能需要在模板中添加一個群組選擇器，並在選擇後更新 selectedGroupId.value
+// 例如：
+// <template>
+//   <select v-model="selectedGroupId" @change="loadDashboardData">
+//     <option :value="null">個人記帳</option>
+//     <option v-for="group in authStore.user?.groups" :key="group.id" :value="group.id">
+//       {{ group.name }}
+//     </option>
+//   </select>
+//   <!-- ... 你的儀表板內容 ... -->
+// </template>
 </script>
