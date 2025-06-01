@@ -597,10 +597,7 @@
 </template>
 
 <script setup>
-// === 修正點：確保從 'vue' 導入 computed ===
-import { ref, onMounted, reactive, watch, computed } from "vue";
-// ==========================================
-
+import { ref, onMounted, reactive, watch, computed } from "vue"; // 確保導入 computed
 import { useRoute } from "vue-router";
 import { useGroupStore } from "../stores/groupStore";
 import { useGroupTransactionStore } from "../stores/groupTransactionStore";
@@ -642,13 +639,21 @@ const groupFilters = reactive({
   search_term: "",
 });
 
+// === 修正點：移除錯誤的 filteredCategories computed 屬性 ===
+// GroupDetails.vue 的篩選器類別邏輯應該這樣寫：
 const filteredCategories = computed(() => {
-  if (!categoryStore.categories || !["income", "expense"].includes(form.type)) {
-    return [];
+  const selectedType = groupFilters.type;
+  if (!selectedType) {
+    return categoryStore.categories;
+  } else {
+    return categoryStore.categories.filter(
+      (category) => category.type === selectedType
+    );
   }
-  return categoryStore.categories.filter((cat) => cat.type === form.type);
 });
+// ==========================================================
 
+// === 修正點：移除錯誤的 watch 語句 ===
 watch(
   () => groupFilters.type,
   (newType, oldType) => {
@@ -665,12 +670,13 @@ watch(
     }
   }
 );
+// ===================================
 
 const applyGroupFilters = () => {
   console.log(
     "DEBUG: applyGroupFilters 函數被調用。當前篩選器值:",
     JSON.parse(JSON.stringify(groupFilters))
-  ); // 記錄篩選器值
+  );
   groupTransactionStore.fetchGroupTransactions(
     currentGroupId.value,
     groupFilters,
@@ -680,32 +686,32 @@ const applyGroupFilters = () => {
 };
 
 onMounted(async () => {
-  console.log("DEBUG: GroupDetails.vue: onMounted 觸發。"); // 記錄組件掛載
+  console.log("DEBUG: GroupDetails.vue: onMounted 觸發。");
   currentGroupId.value = parseInt(route.params.id);
   if (isNaN(currentGroupId.value)) {
-    console.error("DEBUG: 無效的群組ID，重定向。"); // 記錄無效ID
+    console.error("DEBUG: 無效的群組ID，重定向。");
     router.push("/groups");
     return;
   }
-  console.log("DEBUG: 獲取群組ID:", currentGroupId.value); // 記錄獲取到的群組ID
+  console.log("DEBUG: 獲取群組ID:", currentGroupId.value);
 
   const detailsFetched = await groupStore.fetchGroupDetails(
     currentGroupId.value
   );
-  console.log("DEBUG: groupStore.fetchGroupDetails 返回:", detailsFetched); // 記錄群組詳情獲取結果
+  console.log("DEBUG: groupStore.fetchGroupDetails 返回:", detailsFetched);
 
   if (detailsFetched) {
-    console.log("DEBUG: 開始並行獲取群組摘要和類別。"); // 記錄並行獲取開始
+    console.log("DEBUG: 開始並行獲取群組摘要和類別。");
     await Promise.all([
       groupTransactionStore.fetchGroupSummary(currentGroupId.value),
       categoryStore.fetchCategories(),
     ]);
-    console.log("DEBUG: 群組摘要和類別獲取完成。"); // 記錄並行獲取完成
-    applyGroupFilters(); // 調用篩選函數
+    console.log("DEBUG: 群組摘要和類別獲取完成。");
+    applyGroupFilters();
   } else {
     console.log(
       "DEBUG: groupStore.fetchGroupDetails 失敗，不觸發 applyGroupFilters。"
-    ); // 記錄失敗情況
+    );
   }
 });
 
