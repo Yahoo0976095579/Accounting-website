@@ -93,14 +93,17 @@ class User(UserMixin, db.Model):
         }
 
 # server/app.py (在 Category 模型內部)
+# server/app.py (在 Category 模型內部)
 class Category(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     type = db.Column(db.String(10), nullable=False) # 'income' or 'expense'
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False) # 外鍵，歸屬於特定使用者
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
-       # 修正這行：將 backref 改為不會衝突的名稱
-    transactions_in_category = db.relationship('Transaction', backref='personal_transactions_from_category', lazy=True)
+    # === 正確的雙向關係定義 ===
+    # 這裡定義 Category 到 Transaction 的一對多關係
+    # Transaction 模型中的 'category_rel' 將會是這個關係的反向
+    transactions = db.relationship('Transaction', back_populates='category_obj', lazy=True)
 
     # <-- 新增這行：與 GroupTransaction 的關係
     group_transactions_with_category = db.relationship('GroupTransaction', backref='category', lazy=True)
@@ -127,16 +130,15 @@ class Transaction(db.Model):
     category_id = db.Column(db.Integer, db.ForeignKey('category.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False) # 外鍵，歸屬於特定使用者
 
-    # === 新增這行，明確定義與 Category 的關聯 ===
-    # 修正這行：將 backref 改為不會衝突的名稱
-    category = db.relationship('Category', backref='related_transactions_via_category_fk', lazy=True)
+    # === 正確的雙向關係定義 ===
+    # 這裡定義 Transaction 到 Category 的多對一關係
+    # 'category_obj' 是指 Category 模型中關係的反向屬性名稱 (back_populates='transactions')
+    category_obj = db.relationship('Category', back_populates='transactions', lazy=True)
 
     def __repr__(self):
         return f"Transaction('{self.amount}', '{self.type}', '{self.date}', User_id: {self.user_id})"
 
     def to_dict(self):
-        # 這裡就不需要複雜的 if/else 判斷和查詢了，因為 category 屬性應該會存在
-        # 並且在 refresh 後會被加載
         return {
             'id': self.id,
             'amount': self.amount,
@@ -145,7 +147,7 @@ class Transaction(db.Model):
             'date': self.date.isoformat() if self.date else None,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'category_id': self.category_id,
-            'category_name': self.category.name if self.category else None, # 這裡現在應該能正確訪問 category 屬性了
+            'category_name': self.category_obj.name if self.category_obj else None, # 使用新的屬性名稱
             'user_id': self.user_id
         }
 
