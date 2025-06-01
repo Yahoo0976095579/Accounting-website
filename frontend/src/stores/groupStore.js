@@ -181,22 +181,30 @@ export const useGroupStore = defineStore("group", {
     },
     // 新增：刪除群組
     // 刪除群組
+    // 刪除群組
     async deleteGroup(groupId) {
       this.isLoading = true;
-      this.error = null;
+      // this.error = null; // 在這裡清除 error 狀態是好的
       const notificationStore = useNotificationStore();
       try {
         await axios.delete(`${API_BASE_URL}/groups/${groupId}`, {
           headers: this.getAuthHeaders(),
         });
-        this.groups = this.groups.filter((group) => group.id !== groupId); // 從列表中移除
-        this.currentGroup = null; // 清除當前群組詳情
+        this.groups = this.groups.filter((group) => group.id !== groupId);
+        this.currentGroup = null;
         notificationStore.showNotification("群組已成功刪除！", "success");
-        router.push("/groups"); // 重定向到群組列表頁面，會導致頁面刷新
+        router.push("/groups"); // 重定向到群組列表頁面
         return true;
       } catch (err) {
-        this.error = err.response?.data?.error || "刪除群組失敗。";
-        notificationStore.showNotification(this.error, "error");
+        // === 修正點：使用 notificationStore 顯示錯誤 ===
+        const errorMessage = err.response?.data?.error || "刪除群組失敗。";
+        notificationStore.showNotification(errorMessage, "error");
+        // 你可以選擇是否在此處設置 groupStore.error
+        // 如果你希望在通知顯示後，這個錯誤不再影響頁面布局，就不設置 this.error
+        // 或者設置一個短暫的 this.error 並在一段時間後清除
+        // 為了讓你的模板不再顯示大塊錯誤，我們不設置 this.error
+        this.error = null; // 確保清除任何潛在的舊錯誤
+        // ===============================================
         console.error("Delete group error:", err);
         return false;
       } finally {

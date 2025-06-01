@@ -584,7 +584,22 @@ onMounted(async () => {
   currentGroupId.value = parseInt(route.params.id);
   if (isNaN(currentGroupId.value)) {
     console.error("無效的群組ID");
+    // 如果是無效 ID，直接導向群組列表
+    router.push("/groups");
     return;
+  }
+  // fetchGroupDetails 返回 false 時會觸發重定向，並設置 groupStore.error
+  const detailsFetched = await groupStore.fetchGroupDetails(
+    currentGroupId.value
+  );
+
+  if (detailsFetched) {
+    // 只有在成功獲取群組詳情後才載入其他數據
+    await Promise.all([
+      groupTransactionStore.fetchGroupSummary(currentGroupId.value),
+      categoryStore.fetchCategories(),
+    ]);
+    applyGroupFilters();
   }
 
   // 同時獲取群組詳情、群組摘要和群組交易
