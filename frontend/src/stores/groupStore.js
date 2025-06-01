@@ -20,8 +20,9 @@ export const useGroupStore = defineStore("group", {
     },
 
     async inviteMember(groupId, username) {
-      this.isLoading = true;
-      this.error = null;
+      this.isLoading = true; // 或設置一個更細粒度的 loading 狀態，如 isInvitingMember
+      // this.error = null; // 清除錯誤狀態
+      const notificationStore = useNotificationStore();
       try {
         const response = await axios.post(
           `${API_BASE_URL}/groups/${groupId}/invite`,
@@ -30,15 +31,22 @@ export const useGroupStore = defineStore("group", {
             headers: this.getAuthHeaders(),
           }
         );
-        useNotificationStore().showNotification(
-          response.data.message,
+        // 邀請成功後，可能需要刷新邀請列表，或者只是顯示成功通知
+        notificationStore.showNotification(
+          response.data.message || `已成功向 ${username} 發送邀請！`,
           "success"
         );
+        // 如果你在 GroupDetails.vue 中需要刷新成員列表（儘管邀請後成員還不是正式成員），可以這麼做：
+        await this.fetchGroupDetails(groupId); // 刷新群組詳情，以更新成員列表
         return { success: true };
       } catch (err) {
-        this.error = err.response?.data?.error || "發送邀請失敗。";
+        // === 修正點：使用 notificationStore 顯示錯誤，並清除 groupStore.error ===
+        const errorMessage = err.response?.data?.error || "發送邀請失敗。";
+        notificationStore.showNotification(errorMessage, "error");
+        this.error = null; // 確保清除任何可能導致全頁顯示的錯誤
+        // ===================================================================
         console.error("Invite member error:", err);
-        return { success: false, error: this.error };
+        return { success: false, error: errorMessage };
       } finally {
         this.isLoading = false;
       }
