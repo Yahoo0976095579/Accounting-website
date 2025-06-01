@@ -180,6 +180,7 @@ export const useGroupStore = defineStore("group", {
       }
     },
     // 新增：刪除群組
+    // 刪除群組
     async deleteGroup(groupId) {
       this.isLoading = true;
       this.error = null;
@@ -191,7 +192,7 @@ export const useGroupStore = defineStore("group", {
         this.groups = this.groups.filter((group) => group.id !== groupId); // 從列表中移除
         this.currentGroup = null; // 清除當前群組詳情
         notificationStore.showNotification("群組已成功刪除！", "success");
-        router.push("/groups"); // 重定向到群組列表頁面
+        router.push("/groups"); // 重定向到群組列表頁面，會導致頁面刷新
         return true;
       } catch (err) {
         this.error = err.response?.data?.error || "刪除群組失敗。";
@@ -203,10 +204,9 @@ export const useGroupStore = defineStore("group", {
       }
     },
 
-    // 新增：移除群組成員
-    // 修正：移除群組成員
+    // 移除群組成員 (確認此處已有 fetchGroupDetails)
     async removeMember(groupId, memberId) {
-      this.isLoading = true; // 可能需要一個更細粒度的 loading 狀態，例如 isRemovingMember
+      this.isLoading = true;
       this.error = null;
       const notificationStore = useNotificationStore();
       try {
@@ -217,9 +217,8 @@ export const useGroupStore = defineStore("group", {
           }
         );
 
-        // === 修正點：成功後重新獲取群組詳情以更新畫面 ===
+        // === 確認此處的修正：重新獲取群組詳情以更新畫面 ===
         await this.fetchGroupDetails(groupId);
-        // 這將會重新從後端載入最新的成員列表，確保畫面一致
         // ===============================================
 
         notificationStore.showNotification("成員已成功移除！", "success");

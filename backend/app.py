@@ -476,6 +476,8 @@ def update_group(group_id):
 
 # app.py (在 delete_group 函數中)
 
+# app.py (在 delete_group 函數中)
+
 @app.route('/api/groups/<int:group_id>', methods=['DELETE'])
 @jwt_required()
 def delete_group(group_id):
@@ -488,9 +490,8 @@ def delete_group(group_id):
     if not group: # 再次檢查群組是否存在 (雖然前面 GroupMember 檢查過了，但這是更直接的)
         return jsonify({"error": "群組未找到"}), 404
 
-    # === 修正點：使用明確的 Query 來獲取成員數量 ===
-    # 檢查是否有其他成員（除了創建者自己）
-    # 因為創建者也是成員，如果只有他自己，成員數量就是 1。
+    # === 修正點：只檢查是否有其他活躍成員 ===
+    # 獲取活躍成員數量。因為創建者也是成員，如果只有他自己，成員數量就是 1。
     # 所以如果成員數量大於 1，就表示還有其他成員。
     active_member_count = GroupMember.query.filter_by(
         group_id=group_id,
@@ -498,19 +499,22 @@ def delete_group(group_id):
     ).count()
 
     if active_member_count > 1:
+        # 如果有其他活躍成員，則不允許刪除
         return jsonify({"error": "群組中仍有其他活躍成員，無法直接刪除。請先移除所有其他成員。"}), 400
 
-    # === 修正點：檢查是否有交易記錄 ===
-    group_transaction_count = GroupTransaction.query.filter_by(group_id=group_id).count()
-    if group_transaction_count > 0:
-        return jsonify({"error": "群組中仍有交易記錄，無法直接刪除。請先清空所有交易。"}), 400
+    # === 修正點：移除對 GroupTransaction 的檢查 ===
+    # 因為需求是如果只有一個成員 (即創建者/管理員) 就可以直接刪除所有，
+    # 所以不再檢查交易記錄，而是直接在 try 塊中刪除。
 
     try:
-        # 手動刪除所有相關的 GroupMember 和 GroupTransaction 記錄
-        # 這是為了確保數據庫層面的完整性，即使沒有設置 cascade='all, delete-orphan'
-        GroupMember.query.filter_by(group_id=group_id).delete()
-        GroupTransaction.query.filter_by(group_id=group_id).delete()
+        # 刪除所有相關的 GroupMember 記錄
+        GroupMember.query.filter_by(group_id=group_id).delete(synchronize_session=False) # synchronize_session=False 避免競態條件
+        
+        # 刪除所有相關的 GroupTransaction 記錄 (即使有，也會在這裡被刪除)
+        GroupTransaction.query.filter_by(group_id=group_id).delete(synchronize_session=False) # synchronize_session=False 避免競態條件
+
         # 如果你還有 Invitation 或其他與 Group 直接相關的表，也需要在這裡刪除
+        Invitation.query.filter_by(group_id=group_id).delete(synchronize_session=False) # 刪除相關邀請
 
         db.session.delete(group) # 最後刪除群組本身
         db.session.commit()
