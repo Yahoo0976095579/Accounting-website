@@ -1,39 +1,55 @@
-<!-- client/src/components/InviteMemberModal.vue (假設這是你的邀請成員模態框) -->
+<!-- client/src/components/InviteMemberModal.vue -->
 <template>
-  <div class="modal-overlay" @click.self="close">
-    <div class="modal-content">
-      <h2 class="text-xl font-bold mb-4">邀請成員</h2>
-      <form @submit.prevent="submitInvite">
+  <div
+    class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-50"
+  >
+    <div
+      class="relative p-8 bg-white w-full max-w-md mx-auto rounded-lg shadow-xl"
+      @click.stop
+    >
+      <h2 class="text-2xl font-bold mb-6 text-center">邀請成員加入群組</h2>
+
+      <form @submit.prevent="sendInvitation">
         <div class="mb-4">
           <label
             for="inviteUsername"
             class="block text-gray-700 text-sm font-bold mb-2"
-            >用戶名:</label
+            >被邀請者的使用者名稱:</label
           >
           <input
             type="text"
             id="inviteUsername"
-            v-model="inviteUsername"
+            v-model="usernameToInvite"
             class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
             required
-            placeholder="輸入要邀請的用戶名"
           />
         </div>
-        <p v-if="inviteError" class="text-red-500 text-xs italic mb-4">
+
+        <p
+          v-if="inviteError"
+          class="text-red-500 text-xs italic mb-4 text-center"
+        >
           {{ inviteError }}
         </p>
-        <div class="flex justify-end">
+        <p
+          v-if="groupStore.isLoading"
+          class="text-gray-500 text-xs italic mb-4 text-center"
+        >
+          發送中...
+        </p>
+
+        <div class="flex items-center justify-center space-x-4">
           <button
             type="submit"
-            class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mr-2"
+            class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
             :disabled="groupStore.isLoading"
           >
-            邀請
+            發送邀請
           </button>
           <button
             type="button"
-            @click="close"
-            class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded"
+            @click="emit('close')"
+            class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
           >
             取消
           </button>
@@ -44,8 +60,9 @@
 </template>
 
 <script setup>
-import { ref, defineProps, defineEmits } from "vue";
-import { useGroupStore } from "../stores/groupStore"; // 確保導入 groupStore
+import { ref } from "vue";
+import { useGroupStore } from "../stores/groupStore";
+import { useNotificationStore } from "../stores/notificationStore";
 
 const props = defineProps({
   groupId: {
@@ -57,48 +74,41 @@ const props = defineProps({
 const emit = defineEmits(["close", "invited"]);
 
 const groupStore = useGroupStore();
-const inviteUsername = ref("");
-const inviteError = ref(null);
+// const notificationStore = useNotificationStore();
 
-const submitInvite = async () => {
-  inviteError.value = null;
+const usernameToInvite = ref("");
+const inviteError = ref(null); // 用於模態框內部的錯誤訊息
+
+const sendInvitation = async () => {
+  inviteError.value = null; // 清除之前的錯誤
+
+  // 調用 groupStore 的 inviteMember action
   const result = await groupStore.inviteMember(
     props.groupId,
-    inviteUsername.value
+    usernameToInvite.value
   );
+
   if (result.success) {
-    emit("invited"); // 觸發父組件的 invited 事件
-    close();
+    // 成功通知由 groupStore 統一處理
+    emit("invited"); // 通知父組件邀請已發送
+    usernameToInvite.value = ""; // 清空輸入框
   } else {
-    inviteError.value = result.error; // 這裡將錯誤顯示在模態框內，同時 notificationStore 也會顯示通知
+    inviteError.value = result.error; // 將錯誤訊息設置到模態框內部的狀態
   }
 };
 
-const close = () => {
-  emit("close");
-};
+// Note: API_BASE_URL is not defined in this component.
+// It should be imported from a common config or defined locally,
+// or better, handled directly in the groupStore action.
+// Let's modify groupStore to handle the axios call.
 </script>
 
 <style scoped>
-/* 模態框樣式 */
-.modal-overlay {
+.fixed {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-.modal-content {
-  background: white;
-  padding: 2rem;
-  border-radius: 8px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  width: 90%;
-  max-width: 400px;
+  right: 0;
+  bottom: 0;
 }
 </style>
