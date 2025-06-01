@@ -183,128 +183,138 @@
           </h2>
         </div>
 
-        <!-- 篩選器與搜索 -->
-        <div
-          class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-6"
-        >
-          <!-- 交易類型 (不變) -->
-          <div>
-            <label
-              for="groupFilterType"
-              class="block text-gray-700 text-sm font-bold mb-2"
-              >交易類型:</label
-            >
-            <select
-              id="groupFilterType"
-              v-model="groupFilters.type"
-              class="w-full shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
-            >
-              <option value="">所有類型</option>
-              <option value="income">收入</option>
-              <option value="expense">支出</option>
-            </select>
-          </div>
-          <!-- 類別 - 修正點：使用 filteredCategories -->
-          <div>
-            <label
-              for="groupFilterCategory"
-              class="block text-gray-700 text-sm font-bold mb-2"
-              >類別:</label
-            >
-            <select
-              id="groupFilterCategory"
-              v-model="groupFilters.category_id"
-              class="w-full shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
-            >
-              <option value="">所有類別</option>
-              <!-- 修正點：v-for 迭代 filteredCategories -->
-              <option
-                v-for="category in filteredCategories"
-                :key="category.id"
-                :value="category.id"
+        <!-- 篩選器與搜索 及 新增交易按鈕 的整體容器 -->
+        <!-- 在大螢幕 (md) 上，篩選器會佔左邊的大部分空間，新增按鈕在右邊。
+           在小螢幕 (預設)，所有內容會垂直堆疊。 -->
+        <div class="flex flex-col md:flex-row gap-4 mb-6">
+          <!-- 左側：篩選器組 (佔用 md:flex-1) -->
+          <div class="flex flex-col gap-4 flex-1">
+            <!-- 篩選器輸入組 - 恢復為手機垂直堆疊，桌面多列 -->
+            <!-- 使用 flex-wrap 和 w-full 讓輸入框在小螢幕上獨佔一行，
+                 md:w-auto 讓它們在桌面版自動調整寬度，形成多列。
+                 用 flex-col sm:flex-row 來控制日期範圍的內部佈局 -->
+
+            <!-- 交易類型篩選 -->
+            <div class="w-full">
+              <label
+                for="groupFilterType"
+                class="block text-gray-700 text-sm font-bold mb-2"
+                >交易類型:</label
               >
-                {{ category.name }} ({{
-                  category.type === "income" ? "收入" : "支出"
-                }})
-              </option>
-            </select>
-            <p
-              v-if="categoryStore.isLoading"
-              class="text-xs text-gray-500 mt-1"
-            >
-              載入類別中...
-            </p>
-            <p
-              v-if="categoryStore.fetchError"
-              class="text-xs text-red-500 mt-1"
-            >
-              載入類別失敗: {{ categoryStore.fetchError }}
-            </p>
+              <select
+                id="groupFilterType"
+                v-model="groupFilters.type"
+                class="w-full shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
+              >
+                <option value="">所有類型</option>
+                <option value="income">收入</option>
+                <option value="expense">支出</option>
+              </select>
+            </div>
+            <!-- 類別篩選 -->
+            <div class="w-full">
+              <label
+                for="groupFilterCategory"
+                class="block text-gray-700 text-sm font-bold mb-2"
+                >類別:</label
+              >
+              <select
+                id="groupFilterCategory"
+                v-model="groupFilters.category_id"
+                class="w-full shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
+              >
+                <option value="">所有類別</option>
+                <option
+                  v-for="category in filteredCategories"
+                  :key="category.id"
+                  :value="category.id"
+                >
+                  {{ category.name }} ({{
+                    category.type === "income" ? "收入" : "支出"
+                  }})
+                </option>
+              </select>
+              <p
+                v-if="categoryStore.isLoading"
+                class="text-xs text-gray-500 mt-1"
+              >
+                載入類別中...
+              </p>
+              <p
+                v-if="categoryStore.fetchError"
+                class="text-xs text-red-500 mt-1"
+              >
+                載入類別失敗: {{ categoryStore.fetchError }}
+              </p>
+            </div>
+            <!-- 日期範圍篩選 -->
+            <div class="flex flex-col sm:flex-row gap-2 w-full">
+              <div class="flex-1">
+                <label
+                  for="groupStartDate"
+                  class="block text-gray-700 text-sm font-bold mb-2"
+                  >從日期:</label
+                >
+                <input
+                  type="date"
+                  id="groupStartDate"
+                  v-model="groupFilters.start_date"
+                  class="w-full shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
+                />
+              </div>
+              <div class="flex-1">
+                <label
+                  for="groupEndDate"
+                  class="block text-gray-700 text-sm font-bold mb-2"
+                  >到日期:</label
+                >
+                <input
+                  type="date"
+                  id="groupEndDate"
+                  v-model="groupFilters.end_date"
+                  class="w-full shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
+                />
+              </div>
+            </div>
+            <!-- 搜索欄 -->
+            <div class="w-full">
+              <label
+                for="groupSearchTerm"
+                class="block text-gray-700 text-sm font-bold mb-2"
+                >搜索描述:</label
+              >
+              <input
+                type="text"
+                id="groupSearchTerm"
+                v-model="groupFilters.search_term"
+                placeholder="搜索描述..."
+                class="w-full shadow appearance-none border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
+              />
+            </div>
+            <!-- 搜尋/重置按鈕 -->
+            <div class="flex flex-row gap-2 w-full pt-2">
+              <button
+                @click="applyGroupFilters"
+                type="button"
+                class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm transition duration-200 ease-in-out flex-1 md:flex-none md:w-auto"
+              >
+                搜尋
+              </button>
+              <button
+                @click="resetGroupFilters"
+                type="button"
+                class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm transition duration-200 ease-in-out flex-1 md:flex-none md:w-auto"
+              >
+                重置篩選
+              </button>
+            </div>
           </div>
-          <!-- 日期範圍 -->
-          <div>
-            <label
-              for="groupStartDate"
-              class="block text-gray-700 text-sm font-bold mb-2"
-              >從日期:</label
-            >
-            <input
-              type="date"
-              id="groupStartDate"
-              v-model="groupFilters.start_date"
-              class="w-full shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
-            />
-          </div>
-          <div>
-            <label
-              for="groupEndDate"
-              class="block text-gray-700 text-sm font-bold mb-2"
-              >到日期:</label
-            >
-            <input
-              type="date"
-              id="groupEndDate"
-              v-model="groupFilters.end_date"
-              class="w-full shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
-            />
-          </div>
-          <!-- 搜索 -->
-          <div class="col-span-2 md:col-span-1">
-            <!-- 讓搜索框在手機上獨佔兩欄，大螢幕正常 -->
-            <label
-              for="groupSearchTerm"
-              class="block text-gray-700 text-sm font-bold mb-2"
-              >搜索描述:</label
-            >
-            <input
-              type="text"
-              id="groupSearchTerm"
-              v-model="groupFilters.search_term"
-              placeholder="搜索描述..."
-              class="w-full shadow appearance-none border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
-            />
-          </div>
-          <!-- 搜尋/重置 和 新增群組交易按鈕 - 修正後的佈局 -->
-          <!-- 在手機上：佔滿兩欄，兩個按鈕左右均分。
-               在 MD 螢幕及以上：佔滿兩欄，三個按鈕左右均分，但有最大寬度限制。 -->
-          <div class="col-span-full flex flex-row gap-2 pt-2">
-            <button
-              @click="applyGroupFilters"
-              type="button"
-              class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm transition duration-200 ease-in-out flex-1 md:w-auto md:max-w-[120px]"
-            >
-              搜尋
-            </button>
-            <button
-              @click="resetGroupFilters"
-              type="button"
-              class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm transition duration-200 ease-in-out flex-1 md:w-auto md:max-w-[120px]"
-            >
-              重置篩選
-            </button>
+
+          <!-- 右側：新增群組交易按鈕 (佔用 md:w-auto flex-shrink-0) -->
+          <div class="md:w-auto md:flex-shrink-0 pt-4 md:pt-0">
             <button
               @click="openAddGroupTransactionModal"
-              class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm sm:text-base transition duration-200 ease-in-out flex-1 md:w-auto md:max-w-[140px]"
+              class="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-base transition duration-200 ease-in-out md:w-auto"
             >
               新增群組交易
             </button>
