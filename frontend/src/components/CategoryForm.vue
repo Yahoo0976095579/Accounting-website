@@ -32,7 +32,21 @@
           <label class="block text-gray-700 text-sm font-bold mb-2"
             >類型:</label
           >
-          <div class="mt-2">
+          <!-- 修正點：根據 isTypeFixed 決定是否禁用或顯示單一類型 -->
+          <div v-if="isTypeFixed" class="mt-2">
+            <span
+              :class="{
+                'text-green-600': form.type === 'income',
+                'text-red-600': form.type === 'expense',
+              }"
+              class="font-semibold text-lg"
+            >
+              {{ form.type === "income" ? "收入" : "支出" }}
+            </span>
+            <!-- 實際的 input 保持禁用狀態以確保值被傳遞 -->
+            <input type="hidden" v-model="form.type" />
+          </div>
+          <div v-else class="mt-2">
             <label class="inline-flex items-center mr-4">
               <input
                 type="radio"
@@ -82,12 +96,18 @@
 <script setup>
 import { ref, reactive, computed, watch } from "vue";
 import { useCategoryStore } from "../stores/categoryStore";
-import { useNotificationStore } from "../stores/notificationStore"; // 導入通知 Store
+import { useNotificationStore } from "../stores/notificationStore";
 
 const props = defineProps({
   category: {
     type: Object,
     default: null, // 如果為空表示新增，不為空表示編輯
+  },
+  defaultType: {
+    // === 新增：接收預設類型 ===
+    type: String,
+    default: "expense", // 預設值，如果沒有傳入則為 expense
+    validator: (value) => ["income", "expense"].includes(value),
   },
 });
 
@@ -98,35 +118,39 @@ const notificationStore = useNotificationStore();
 
 const isEditMode = computed(() => !!props.category);
 
-const formError = ref(null); // 新增這行：用於表單內部的錯誤訊息
+// === 新增：判斷類型是否應被固定 ===
+// 在新增模式下，如果傳入了 defaultType 且它與當前 form.type 一致，則固定
+const isTypeFixed = computed(() => !isEditMode.value && props.defaultType);
 
-// 表單數據
+const formError = ref(null);
+
 const form = reactive({
   name: "",
-  type: "expense", // 預設支出類型
+  type: "expense", // 預設支出類型，但會被 watch 覆寫
 });
 
-// 監聽 props.category 的變化來填充表單（用於編輯模式）
+// 監聽 props.category 和 props.defaultType 的變化來填充表單
 watch(
-  () => props.category,
-  (newVal) => {
-    if (newVal) {
-      form.name = newVal.name;
-      form.type = newVal.type;
+  () => [props.category, props.defaultType], // 監聽兩個 props
+  ([newCategory, newDefaultType]) => {
+    if (newCategory) {
+      // 編輯模式
+      form.name = newCategory.name;
+      form.type = newCategory.type;
     } else {
-      // 重置表單為預設值 (新增模式)
+      // 新增模式
       form.name = "";
-      form.type = "expense";
+      form.type = newDefaultType; // 使用傳入的 defaultType
     }
   },
   { immediate: true }
-); // immediate: true 使得組件首次載入時也能觸發 watch
+);
 
 const saveCategory = async () => {
-  formError.value = null; // 在每次嘗試保存前清除錯誤
+  formError.value = null;
   const payload = { ...form };
 
-  let result; // 接收 store action 的返回結果
+  let result;
 
   if (isEditMode.value) {
     result = await categoryStore.updateCategory(props.category.id, payload);
@@ -135,14 +159,13 @@ const saveCategory = async () => {
   }
 
   if (result.success) {
-    // 檢查返回結果的 success 屬性
     notificationStore.showNotification(
       `類別${isEditMode.value ? "更新" : "新增"}成功！`,
       "success"
     );
-    emit("saved"); // 通知父組件保存成功
+    emit("saved");
   } else {
-    formError.value = result.error; // 設置表單內部的錯誤訊息
+    formError.value = result.error;
   }
 };
 </script>

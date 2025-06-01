@@ -192,7 +192,7 @@ const expenseCategories = computed(() =>
 
 const openAddCategoryModal = (type) => {
   currentCategory.value = null;
-  addCategoryType.value = type;
+  addCategoryType.value = type; // 這個 type 值會傳遞給 CategoryForm
   showCategoryModal.value = true;
 };
 
