@@ -1,7 +1,5 @@
-// client/src/stores/summaryStore.js
 import { defineStore } from "pinia";
 import axios from "axios";
-
 import { API_BASE_URL } from "./config";
 
 export const useSummaryStore = defineStore("summary", {
@@ -10,14 +8,18 @@ export const useSummaryStore = defineStore("summary", {
     totalExpense: 0,
     balance: 0,
     categoryBreakdown: [],
-    incomeCategoryBreakdown: [], // 新增這行
+    incomeCategoryBreakdown: [],
     trendData: [],
     isLoading: false,
     fetchError: null,
-    isDataReady: false, // 這個狀態仍然可以保留，但現在它只是標記數據是否完成載入，不會直接影響渲染
+    isDataReady: false,
   }),
   actions: {
-    // fetchOverallSummary, fetchCategoryBreakdown, fetchTrendData 這些方法保持不變，但不會再從 Dashboard.vue 直接調用
+    // 取得 JWT token 的 header
+    getAuthHeaders() {
+      const token = localStorage.getItem("access_token");
+      return token ? { Authorization: `Bearer ${token}` } : {};
+    },
 
     async loadAllDashboardData(chartFilters) {
       this.isLoading = true;
@@ -25,7 +27,6 @@ export const useSummaryStore = defineStore("summary", {
       this.isDataReady = false;
 
       try {
-        // 並行發送所有請求
         await Promise.all([
           this.fetchOverallSummaryInternal(),
           this.fetchTrendDataInternal(chartFilters),
@@ -33,7 +34,7 @@ export const useSummaryStore = defineStore("summary", {
             type: "expense",
             ...chartFilters,
           }),
-          this.fetchIncomeCategoryBreakdownInternal(chartFilters), // 新增這行
+          this.fetchIncomeCategoryBreakdownInternal(chartFilters),
         ]);
         this.isDataReady = true;
       } catch (err) {
@@ -45,49 +46,52 @@ export const useSummaryStore = defineStore("summary", {
         this.isLoading = false;
       }
     },
-    // 為了讓 loadAllDashboardData 能調用內部方法，我們需要將原本的 fetch... 方法改為內部方法
+
     async fetchOverallSummaryInternal() {
-      // 這是新的內部方法名稱
       try {
         const response = await axios.get(`${API_BASE_URL}/summary`, {
-          withCredentials: true,
+          headers: this.getAuthHeaders(),
         });
         this.totalIncome = response.data.total_income;
         this.totalExpense = response.data.total_expense;
         this.balance = response.data.balance;
       } catch (err) {
-        throw err; // 拋出錯誤，讓 loadAllDashboardData 捕獲
+        throw err;
       }
     },
+
     async fetchCategoryBreakdownInternal(filters) {
-      // 這是新的內部方法名稱
       try {
         const response = await axios.get(
           `${API_BASE_URL}/summary/category_breakdown`,
-          { params: filters, withCredentials: true }
+          { params: filters, headers: this.getAuthHeaders() }
         );
         this.categoryBreakdown = response.data;
       } catch (err) {
         throw err;
       }
     },
+
     async fetchTrendDataInternal(filters) {
-      // 這是新的內部方法名稱
       try {
         const response = await axios.get(`${API_BASE_URL}/summary/trend`, {
           params: filters,
-          withCredentials: true,
+          headers: this.getAuthHeaders(),
         });
         this.trendData = response.data;
       } catch (err) {
         throw err;
       }
     },
+
     async fetchIncomeCategoryBreakdownInternal(filters) {
       try {
         const response = await axios.get(
           `${API_BASE_URL}/summary/category_breakdown`,
-          { params: { ...filters, type: "income" }, withCredentials: true }
+          {
+            params: { ...filters, type: "income" },
+            headers: this.getAuthHeaders(),
+          }
         );
         this.incomeCategoryBreakdown = response.data;
       } catch (err) {

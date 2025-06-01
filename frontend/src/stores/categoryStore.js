@@ -1,4 +1,3 @@
-// client/src/stores/categoryStore.js
 import { defineStore } from "pinia";
 import axios from "axios";
 import { useNotificationStore } from "./notificationStore";
@@ -11,12 +10,18 @@ export const useCategoryStore = defineStore("category", {
     fetchError: null, // 將獲取類別的錯誤單獨命名
   }),
   actions: {
+    // 取得 JWT token 的 header
+    getAuthHeaders() {
+      const token = localStorage.getItem("access_token");
+      return token ? { Authorization: `Bearer ${token}` } : {};
+    },
+
     async fetchCategories() {
       this.isLoading = true;
       this.fetchError = null; // 清除獲取錯誤
       try {
         const response = await axios.get(`${API_BASE_URL}/categories`, {
-          withCredentials: true,
+          headers: this.getAuthHeaders(),
         });
         this.categories = response.data;
       } catch (err) {
@@ -36,7 +41,7 @@ export const useCategoryStore = defineStore("category", {
           `${API_BASE_URL}/categories`,
           categoryData,
           {
-            withCredentials: true,
+            headers: this.getAuthHeaders(),
           }
         );
         this.categories.push(response.data);
@@ -60,7 +65,7 @@ export const useCategoryStore = defineStore("category", {
           `${API_BASE_URL}/categories/${id}`,
           categoryData,
           {
-            withCredentials: true,
+            headers: this.getAuthHeaders(),
           }
         );
         const index = this.categories.findIndex((c) => c.id === id);
@@ -86,7 +91,7 @@ export const useCategoryStore = defineStore("category", {
       // 不設置 this.fetchError
       try {
         await axios.delete(`${API_BASE_URL}/categories/${id}`, {
-          withCredentials: true,
+          headers: this.getAuthHeaders(),
         });
         this.categories = this.categories.filter((c) => c.id !== id);
         notificationStore.showNotification("類別刪除成功！", "success");

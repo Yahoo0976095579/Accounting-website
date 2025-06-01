@@ -1,13 +1,14 @@
 from flask import Flask, request, jsonify, session, redirect, url_for
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, date, timedelta
 from sqlalchemy import func, extract, UniqueConstraint # <-- 確保這裡有 UniqueConstraint
 import os
 from dotenv import load_dotenv
 import re
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 
 # 載入 .env 檔案中的環境變數
 load_dotenv()
@@ -23,7 +24,8 @@ app.config.update(
     SESSION_COOKIE_SAMESITE='None',
     SESSION_COOKIE_SECURE=True
 )
-
+app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'your_jwt_secret_key')
+jwt = JWTManager(app)
 # 啟用 CORS，允許前端應用程式訪問
 # 在開發階段，可以允許所有來源。生產環境中，請限制為你的前端域名。
 #CORS(app, supports_credentials=True, origins=["https://accounting-website-j8a3.vercel.app"]) # supports_credentials=True 允許發送 cookie/會話憑證
@@ -33,23 +35,7 @@ CORS(app, supports_credentials=True, origins=re.compile(r"https://accounting-web
 
 db = SQLAlchemy(app)    
 
-# --- Flask-Login 初始化 ---
-login_manager = LoginManager()
-login_manager.init_app(app)
-login_manager.login_view = 'login' # 未登入時重定向到的視圖名稱
 
-# 使用者載入器：告訴 Flask-Login 如何根據使用者 ID 載入使用者物件
-# server/app.py (在 Flask-Login 初始化部分)
-@login_manager.user_loader
-def load_user(user_id):
-    # 推薦的 SQLAlchemy 2.0 寫法
-    # 注意：db.session.get() 直接接收主鍵，且不需要 Query 物件
-    return db.session.get(User, int(user_id))
-# ✅ 未登入時回傳 JSON 錯誤，而不是重定向
-@login_manager.unauthorized_handler
-def unauthorized():
-    return jsonify({'error': '未登入，請先登入'}), 401
-# --- 資料庫模型定義 ---
 
 # server/app.py (在 User 模型內部)
 class User(UserMixin, db.Model):
@@ -288,7 +274,6 @@ with app.app_context():
 # 這樣確保在 app.run() 之前就創建好表
 
 # Flask-Login 的 login_view 設置
-login_manager.login_view = 'login'
 
 # --- 認證相關 API ---
 
@@ -309,8 +294,7 @@ def register():
     db.session.add(new_user)
     try:
         db.session.commit()
-        # 註冊成功後自動登入
-        login_user(new_user)
+
         # 也可以在這裡為新使用者添加預設類別
         add_default_categories_for_user(new_user.id)
         return jsonify({"message": "User registered and logged in successfully", "user": new_user.to_dict()}), 201
@@ -349,28 +333,27 @@ def login():
     user = User.query.filter_by(username=username).first()
 
     if user and user.check_password(password):
-        
-        login_user(user) # 登入使用者，將使用者資訊儲存在 session 中
-        session.modified = True  # 告訴 flask session 有修改
-        return jsonify({"message": "Logged in successfully", "user": user.to_dict()}), 200
+        access_token = create_access_token(identity=user.id)
+        return jsonify({
+            "message": "Logged in successfully",
+            "access_token": access_token,
+            "user": user.to_dict()
+        }), 200
     else:
-        return jsonify({"error": "名稱或密碼錯誤"}), 401 # Unauthorized
+        return jsonify({"error": "名稱或密碼錯誤"}), 401
 
 @app.route('/api/logout', methods=['GET']) # 確保是 GET 方法
-@login_required
+@jwt_required()
 def logout():
-    logout_user()
     return jsonify({"message": "Logged out successfully"}), 200
 
 @app.route('/api/user', methods=['GET'])
-@login_required # 只有登入後才能獲取使用者資訊
-def get_current_user():
-    return jsonify(current_user.to_dict()), 200
+@jwt_required() # 只有登入後才能獲取使用者資訊
 
 # --- 群組管理 API ---
 
 @app.route('/api/groups', methods=['POST'])
-@login_required
+@jwt_required()
 def create_group():
     data = request.get_json()
     name = data.get('name')
@@ -380,22 +363,22 @@ def create_group():
         return jsonify({"error": "群組名稱為必填項"}), 400
 
     # 創建群組
-    new_group = Group(name=name, description=description, created_by_user_id=current_user.id)
+    new_group = Group(name=name, description=description, created_by_user_id=get_jwt_identity())
     db.session.add(new_group)
     db.session.commit() # 先提交，以便獲取 new_group.id
 
     # 將創建者自動添加為群組管理員
-    group_member = GroupMember(group_id=new_group.id, user_id=current_user.id, role='admin', status='accepted')
+    group_member = GroupMember(group_id=new_group.id, user_id=get_jwt_identity(), role='admin', status='accepted')
     db.session.add(group_member)
     db.session.commit()
 
     return jsonify({"message": "群組創建成功", "group": new_group.to_dict()}), 201
 
 @app.route('/api/groups', methods=['GET'])
-@login_required
+@jwt_required()
 def get_user_groups():
     # 獲取當前使用者所屬的所有群組
-    memberships = GroupMember.query.filter_by(user_id=current_user.id, status='accepted').all()
+    memberships = GroupMember.query.filter_by(user_id=get_jwt_identity(), status='accepted').all()
     groups_data = []
     for membership in memberships:
         group = membership.group # 透過關係獲取 Group 對象
@@ -407,10 +390,10 @@ def get_user_groups():
     return jsonify(groups_data), 200
 
 @app.route('/api/groups/<int:group_id>', methods=['GET'])
-@login_required
+@jwt_required()
 def get_group_details(group_id):
     # 確保使用者是群組成員
-    group_member = GroupMember.query.filter_by(group_id=group_id, user_id=current_user.id, status='accepted').first()
+    group_member = GroupMember.query.filter_by(group_id=group_id, user_id=get_jwt_identity(), status='accepted').first()
     if not group_member:
         return jsonify({"error": "群組未找到或您不是該群組成員"}), 404
 
@@ -429,10 +412,10 @@ def get_group_details(group_id):
     return jsonify(group_details), 200
 
 @app.route('/api/groups/<int:group_id>', methods=['PUT'])
-@login_required
+@jwt_required()
 def update_group(group_id):
     # 檢查使用者是否為群組管理員
-    group_member = GroupMember.query.filter_by(group_id=group_id, user_id=current_user.id, role='admin', status='accepted').first()
+    group_member = GroupMember.query.filter_by(group_id=group_id, user_id=get_jwt_identity(), role='admin', status='accepted').first()
     if not group_member:
         return jsonify({"error": "群組未找到或您無權修改該群組"}), 403 # Forbidden
 
@@ -449,10 +432,10 @@ def update_group(group_id):
         return jsonify({"error": "群組更新失敗: " + str(e)}), 500
 
 @app.route('/api/groups/<int:group_id>', methods=['DELETE'])
-@login_required
+@jwt_required()
 def delete_group(group_id):
     # 檢查使用者是否為群組管理員
-    group_member = GroupMember.query.filter_by(group_id=group_id, user_id=current_user.id, role='admin', status='accepted').first()
+    group_member = GroupMember.query.filter_by(group_id=group_id, user_id=get_jwt_identity(), role='admin', status='accepted').first()
     if not group_member:
         return jsonify({"error": "群組未找到或您無權刪除該群組"}), 403 # Forbidden
 
@@ -475,10 +458,10 @@ def delete_group(group_id):
         return jsonify({"error": "群組刪除失敗: " + str(e)}), 500
 
 @app.route('/api/groups/<int:group_id>/leave', methods=['POST'])
-@login_required
+@jwt_required()
 def leave_group(group_id):
     # 查找使用者在該群組的成員身份
-    group_member = GroupMember.query.filter_by(group_id=group_id, user_id=current_user.id, status='accepted').first()
+    group_member = GroupMember.query.filter_by(group_id=group_id, user_id=get_jwt_identity(), status='accepted').first()
     if not group_member:
         return jsonify({"error": "您不是該群組成員"}), 404
 
@@ -498,10 +481,10 @@ def leave_group(group_id):
 # --- 群組邀請 API ---
 
 @app.route('/api/groups/<int:group_id>/invite', methods=['POST'])
-@login_required
+@jwt_required()
 def invite_member(group_id):
     # 檢查使用者是否為群組管理員
-    group_member = GroupMember.query.filter_by(group_id=group_id, user_id=current_user.id, role='admin', status='accepted').first()
+    group_member = GroupMember.query.filter_by(group_id=group_id, user_id=get_jwt_identity(), role='admin', status='accepted').first()
     if not group_member:
         return jsonify({"error": "群組未找到或您無權邀請成員"}), 403
 
@@ -514,7 +497,7 @@ def invite_member(group_id):
     if not invited_user:
         return jsonify({"error": "被邀請的使用者不存在"}), 404
 
-    if invited_user.id == current_user.id:
+    if invited_user.id == get_jwt_identity():
         return jsonify({"error": "不能邀請自己"}), 400
 
     # 檢查是否已經是成員
@@ -527,7 +510,7 @@ def invite_member(group_id):
 
     new_invitation = Invitation(
         group_id=group_id,
-        invited_by_user_id=current_user.id,
+        invited_by_user_id=get_jwt_identity(),
         invited_user_id=invited_user.id,
         status='pending'
     )
@@ -540,28 +523,28 @@ def invite_member(group_id):
         return jsonify({"error": "發送邀請失敗: " + str(e)}), 500
 
 @app.route('/api/invitations', methods=['GET'])
-@login_required
+@jwt_required()
 def get_user_invitations():
     # 獲取當前使用者收到的所有待處理邀請
-    invitations = Invitation.query.filter_by(invited_user_id=current_user.id, status='pending').all()
+    invitations = Invitation.query.filter_by(invited_user_id=get_jwt_identity(), status='pending').all()
     return jsonify([inv.to_dict() for inv in invitations]), 200
 
 @app.route('/api/invitations/<int:invitation_id>/accept', methods=['POST'])
-@login_required
+@jwt_required()
 def accept_invitation(invitation_id):
-    invitation = Invitation.query.filter_by(id=invitation_id, invited_user_id=current_user.id, status='pending').first()
+    invitation = Invitation.query.filter_by(id=invitation_id, invited_user_id=get_jwt_identity(), status='pending').first()
     if not invitation:
         return jsonify({"error": "邀請未找到或已失效"}), 404
 
     # 檢查是否已是成員 (以防萬一)
-    if GroupMember.query.filter_by(group_id=invitation.group_id, user_id=current_user.id, status='accepted').first():
+    if GroupMember.query.filter_by(group_id=invitation.group_id, user_id=get_jwt_identity(), status='accepted').first():
         invitation.status = 'rejected' # 如果已是成員，則將邀請狀態設為拒絕
         db.session.commit()
         return jsonify({"error": "您已是該群組成員，邀請已處理"}), 400
 
     try:
         # 將使用者添加為群組成員
-        new_member = GroupMember(group_id=invitation.group_id, user_id=current_user.id, role='member', status='accepted')
+        new_member = GroupMember(group_id=invitation.group_id, user_id=get_jwt_identity(), role='member', status='accepted')
         db.session.add(new_member)
         invitation.status = 'accepted' # 更新邀請狀態
         db.session.commit()
@@ -571,9 +554,9 @@ def accept_invitation(invitation_id):
         return jsonify({"error": "接受邀請失敗: " + str(e)}), 500
 
 @app.route('/api/invitations/<int:invitation_id>/reject', methods=['POST'])
-@login_required
+@jwt_required()
 def reject_invitation(invitation_id):
-    invitation = Invitation.query.filter_by(id=invitation_id, invited_user_id=current_user.id, status='pending').first()
+    invitation = Invitation.query.filter_by(id=invitation_id, invited_user_id=get_jwt_identity(), status='pending').first()
     if not invitation:
         return jsonify({"error": "邀請未找到或已失效"}), 404
 
@@ -590,10 +573,10 @@ def reject_invitation(invitation_id):
 # 細節實現將與個人交易類似，但需考慮 group_id 和權限。
 
 @app.route('/api/groups/<int:group_id>/transactions', methods=['GET'])
-@login_required
+@jwt_required()
 def get_group_transactions(group_id):
     # 檢查使用者是否為群組成員
-    group_member = GroupMember.query.filter_by(group_id=group_id, user_id=current_user.id, status='accepted').first()
+    group_member = GroupMember.query.filter_by(group_id=group_id, user_id=get_jwt_identity(), status='accepted').first()
     if not group_member:
         return jsonify({"error": "群組未找到或您不是該群組成員"}), 404
 
@@ -647,10 +630,10 @@ def get_group_transactions(group_id):
     }), 200
 
 @app.route('/api/groups/<int:group_id>/transactions', methods=['POST'])
-@login_required
+@jwt_required()
 def add_group_transaction(group_id):
     # 檢查使用者是否為群組成員
-    group_member = GroupMember.query.filter_by(group_id=group_id, user_id=current_user.id, status='accepted').first()
+    group_member = GroupMember.query.filter_by(group_id=group_id, user_id=get_jwt_identity(), status='accepted').first()
     if not group_member:
         return jsonify({"error": "群組未找到或您不是該群組成員"}), 404
 
@@ -682,7 +665,7 @@ def add_group_transaction(group_id):
             description=description,
             date=transaction_date,
             category_id=category_id,
-            created_by_user_id=current_user.id # 記錄誰創建了這筆交易
+            created_by_user_id=get_jwt_identity() # 記錄誰創建了這筆交易
         )
         db.session.add(new_transaction)
         db.session.commit()
@@ -695,10 +678,10 @@ def add_group_transaction(group_id):
         return jsonify({"error": "新增群組交易失敗: " + str(e)}), 500
 
 @app.route('/api/groups/<int:group_id>/transactions/<int:transaction_id>', methods=['GET'])
-@login_required
+@jwt_required()
 def get_group_transaction(group_id, transaction_id):
     # 檢查使用者是否為群組成員
-    group_member = GroupMember.query.filter_by(group_id=group_id, user_id=current_user.id, status='accepted').first()
+    group_member = GroupMember.query.filter_by(group_id=group_id, user_id=get_jwt_identity(), status='accepted').first()
     if not group_member:
         return jsonify({"error": "群組未找到或您不是該群組成員"}), 404
 
@@ -709,10 +692,10 @@ def get_group_transaction(group_id, transaction_id):
     return jsonify(transaction.to_dict()), 200
 
 @app.route('/api/groups/<int:group_id>/transactions/<int:transaction_id>', methods=['PUT'])
-@login_required
+@jwt_required()
 def update_group_transaction(group_id, transaction_id):
     # 檢查使用者是否為群組管理員
-    group_member = GroupMember.query.filter_by(group_id=group_id, user_id=current_user.id, status='accepted').first()
+    group_member = GroupMember.query.filter_by(group_id=group_id, user_id=get_jwt_identity(), status='accepted').first()
     if not group_member:
         return jsonify({"error": "群組未找到或您不是該群組成員"}), 404
 
@@ -725,7 +708,7 @@ def update_group_transaction(group_id, transaction_id):
     # 目前：只要是群組成員就可以修改
     # 考慮：只有管理員能修改其他成員的交易，成員只能修改自己的
     # 簡化：先讓群組成員都可以修改
-    # if transaction.created_by_user_id != current_user.id and group_member.role != 'admin':
+    # if transaction.created_by_user_id != get_jwt_identity() and group_member.role != 'admin':
     #     return jsonify({"error": "您無權修改此交易"}), 403
 
     data = request.get_json()
@@ -757,10 +740,10 @@ def update_group_transaction(group_id, transaction_id):
         return jsonify({"error": "更新群組交易失敗: " + str(e)}), 500
 
 @app.route('/api/groups/<int:group_id>/transactions/<int:transaction_id>', methods=['DELETE'])
-@login_required
+@jwt_required()
 def delete_group_transaction(group_id, transaction_id):
     # 檢查使用者是否為群組成員
-    group_member = GroupMember.query.filter_by(group_id=group_id, user_id=current_user.id, status='accepted').first()
+    group_member = GroupMember.query.filter_by(group_id=group_id, user_id=get_jwt_identity(), status='accepted').first()
     if not group_member:
         return jsonify({"error": "群組未找到或您不是該群組成員"}), 404
 
@@ -771,7 +754,7 @@ def delete_group_transaction(group_id, transaction_id):
 
     # TODO: 考慮是否只有創建者或管理員才能刪除交易？
     # 簡化：先讓群組成員都可以刪除
-    # if transaction.created_by_user_id != current_user.id and group_member.role != 'admin':
+    # if transaction.created_by_user_id != get_jwt_identity() and group_member.role != 'admin':
     #     return jsonify({"error": "您無權刪除此交易"}), 403
 
     try:
@@ -786,9 +769,9 @@ def delete_group_transaction(group_id, transaction_id):
 # 這些 API 也需要填充實際邏輯，類似於個人摘要 API。
 
 @app.route('/api/groups/<int:group_id>/summary', methods=['GET'])
-@login_required
+@jwt_required()
 def get_group_summary(group_id):
-    group_member = GroupMember.query.filter_by(group_id=group_id, user_id=current_user.id, status='accepted').first()
+    group_member = GroupMember.query.filter_by(group_id=group_id, user_id=get_jwt_identity(), status='accepted').first()
     if not group_member:
         return jsonify({"error": "群組未找到或您不是該群組成員"}), 404
 
@@ -802,9 +785,9 @@ def get_group_summary(group_id):
     }), 200
 
 @app.route('/api/groups/<int:group_id>/summary/category_breakdown', methods=['GET'])
-@login_required
+@jwt_required()
 def get_group_category_breakdown(group_id):
-    group_member = GroupMember.query.filter_by(group_id=group_id, user_id=current_user.id, status='accepted').first()
+    group_member = GroupMember.query.filter_by(group_id=group_id, user_id=get_jwt_identity(), status='accepted').first()
     if not group_member:
         return jsonify({"error": "群組未找到或您不是該群組成員"}), 404
 
@@ -848,9 +831,9 @@ def get_group_category_breakdown(group_id):
     return jsonify(summary_by_category), 200
 
 @app.route('/api/groups/<int:group_id>/summary/trend', methods=['GET'])
-@login_required
+@jwt_required()
 def get_group_trend_data(group_id):
-    group_member = GroupMember.query.filter_by(group_id=group_id, user_id=current_user.id, status='accepted').first()
+    group_member = GroupMember.query.filter_by(group_id=group_id, user_id=get_jwt_identity(), status='accepted').first()
     if not group_member:
         return jsonify({"error": "群組未找到或您不是該群組成員"}), 404
 
@@ -912,13 +895,13 @@ def get_group_trend_data(group_id):
 # --- 類別相關 API (受保護) ---
 
 @app.route('/api/categories', methods=['GET'])
-@login_required
+@jwt_required()
 def get_categories():
-    categories = Category.query.filter_by(user_id=current_user.id).all()
+    categories = Category.query.filter_by(user_id=get_jwt_identity()).all()
     return jsonify([c.to_dict() for c in categories])
 
 @app.route('/api/categories', methods=['POST'])
-@login_required
+@jwt_required()
 def add_category():
     data = request.get_json()
     name = data.get('name')
@@ -930,10 +913,10 @@ def add_category():
         return jsonify({"error": "Invalid category type"}), 400
 
     # 檢查是否已存在相同名稱的類別給當前使用者
-    if Category.query.filter_by(user_id=current_user.id, name=name).first():
+    if Category.query.filter_by(user_id=get_jwt_identity(), name=name).first():
         return jsonify({"error": "已存在同名的類別"}), 409
 
-    new_category = Category(name=name, type=category_type, user_id=current_user.id)
+    new_category = Category(name=name, type=category_type, user_id=get_jwt_identity())
     try:
         db.session.add(new_category)
         db.session.commit()
@@ -943,9 +926,9 @@ def add_category():
         return jsonify({"error": str(e)}), 400
 
 @app.route('/api/categories/<int:category_id>', methods=['PUT'])
-@login_required
+@jwt_required()
 def update_category(category_id):
-    category = Category.query.filter_by(id=category_id, user_id=current_user.id).first()
+    category = Category.query.filter_by(id=category_id, user_id=get_jwt_identity()).first()
     if not category:
         return jsonify({"error": "已存在同名的類別"}), 404
 
@@ -958,7 +941,7 @@ def update_category(category_id):
 
     # 檢查更新後是否會與同使用者下的其他類別名稱重複
     if Category.query.filter(
-        Category.user_id == current_user.id,
+        Category.user_id == get_jwt_identity(),
         Category.name == name,
         Category.id != category_id
     ).first():
@@ -976,14 +959,14 @@ def update_category(category_id):
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/categories/<int:category_id>', methods=['DELETE'])
-@login_required
+@jwt_required()
 def delete_category(category_id):
-    category = Category.query.filter_by(id=category_id, user_id=current_user.id).first()
+    category = Category.query.filter_by(id=category_id, user_id=get_jwt_identity()).first()
     if not category:
         return jsonify({"error": "Category not found or not owned by user"}), 404
 
     # 檢查是否有交易記錄關聯到此類別
-    if Transaction.query.filter_by(category_id=category_id, user_id=current_user.id).first():
+    if Transaction.query.filter_by(category_id=category_id, user_id=get_jwt_identity()).first():
         return jsonify({"error": "Cannot delete category with associated transactions"}), 400
 
     try:
@@ -998,7 +981,7 @@ def delete_category(category_id):
 # --- 交易記錄相關 API (受保護，包含篩選和分頁) ---
 
 @app.route('/api/transactions', methods=['GET'])
-@login_required
+@jwt_required()
 def get_transactions():
     # 篩選參數
     transaction_type = request.args.get('type') # 'income' or 'expense'
@@ -1011,7 +994,7 @@ def get_transactions():
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 10, type=int)
 
-    query = Transaction.query.filter_by(user_id=current_user.id)
+    query = Transaction.query.filter_by(user_id=get_jwt_identity())
 
     if transaction_type in ['income', 'expense']:
         query = query.filter_by(type=transaction_type)
@@ -1055,17 +1038,17 @@ def get_transactions():
     })
 
 @app.route('/api/transactions/<int:transaction_id>', methods=['GET'])
-@login_required
+@jwt_required()
 def get_transaction(transaction_id):
     # 確保使用者只能查看自己的交易記錄
-    transaction = Transaction.query.filter_by(id=transaction_id, user_id=current_user.id).first()
+    transaction = Transaction.query.filter_by(id=transaction_id, user_id=get_jwt_identity()).first()
     if not transaction:
         return jsonify({"error": "Transaction not found or not owned by user"}), 404
     return jsonify(transaction.to_dict())
 
 # server/app.py (在 add_transaction 函數內部)
 @app.route('/api/transactions', methods=['POST'])
-@login_required
+@jwt_required()
 def add_transaction():
     data = request.get_json()
     try:
@@ -1081,7 +1064,7 @@ def add_transaction():
             return jsonify({"error": "Invalid transaction type"}), 400
 
         # 檢查 category_id 是否存在且歸屬於當前使用者
-        category = Category.query.filter_by(id=category_id, user_id=current_user.id).first()
+        category = Category.query.filter_by(id=category_id, user_id=get_jwt_identity()).first()
         if not category:
             return jsonify({"error": "Category not found or not owned by user"}), 404
 
@@ -1093,7 +1076,7 @@ def add_transaction():
             description=description,
             date=transaction_date,
             category_id=category_id,
-            user_id=current_user.id # 設置交易記錄的 user_id
+            user_id=get_jwt_identity() # 設置交易記錄的 user_id
         )
         db.session.add(new_transaction)
         db.session.commit() # 提交到資料庫
@@ -1110,9 +1093,9 @@ def add_transaction():
         return jsonify({"error": "Failed to add transaction: " + str(e)}), 500
 
 @app.route('/api/transactions/<int:transaction_id>', methods=['PUT'])
-@login_required
+@jwt_required()
 def update_transaction(transaction_id):
-    transaction = Transaction.query.filter_by(id=transaction_id, user_id=current_user.id).first()
+    transaction = Transaction.query.filter_by(id=transaction_id, user_id=get_jwt_identity()).first()
     if not transaction:
         return jsonify({"error": "Transaction not found or not owned by user"}), 404
 
@@ -1130,7 +1113,7 @@ def update_transaction(transaction_id):
             transaction.date = datetime.strptime(data.get('date'), '%Y-%m-%d').date()
         if 'category_id' in data:
             category_id = data.get('category_id')
-            category = Category.query.filter_by(id=category_id, user_id=current_user.id).first() # 確保類別屬於當前使用者
+            category = Category.query.filter_by(id=category_id, user_id=get_jwt_identity()).first() # 確保類別屬於當前使用者
             if not category:
                 return jsonify({"error": "Category not found or not owned by user"}), 404
             transaction.category_id = category_id
@@ -1144,9 +1127,9 @@ def update_transaction(transaction_id):
         return jsonify({"error": "Failed to update transaction: " + str(e)}), 500
 
 @app.route('/api/transactions/<int:transaction_id>', methods=['DELETE'])
-@login_required
+@jwt_required()
 def delete_transaction(transaction_id):
-    transaction = Transaction.query.filter_by(id=transaction_id, user_id=current_user.id).first()
+    transaction = Transaction.query.filter_by(id=transaction_id, user_id=get_jwt_identity()).first()
     if not transaction:
         return jsonify({"error": "Transaction not found or not owned by user"}), 404
     try:
@@ -1160,11 +1143,11 @@ def delete_transaction(transaction_id):
 # --- 摘要/統計相關 API (受保護，包含篩選) ---
 
 @app.route('/api/summary', methods=['GET'])
-@login_required
+@jwt_required()
 def get_summary():
-    # 獲取總收入和總支出
-    total_income = db.session.query(func.sum(Transaction.amount)).filter_by(user_id=current_user.id, type='income').scalar() or 0
-    total_expense = db.session.query(func.sum(Transaction.amount)).filter_by(user_id=current_user.id, type='expense').scalar() or 0
+    user_id = get_jwt_identity()
+    total_income = db.session.query(func.sum(Transaction.amount)).filter_by(user_id=user_id, type='income').scalar() or 0
+    total_expense = db.session.query(func.sum(Transaction.amount)).filter_by(user_id=user_id, type='expense').scalar() or 0
 
     return jsonify({
         "total_income": total_income,
@@ -1173,7 +1156,7 @@ def get_summary():
     })
 
 @app.route('/api/summary/category_breakdown', methods=['GET'])
-@login_required
+@jwt_required()
 def get_category_breakdown():
     transaction_type = request.args.get('type') # 'income' or 'expense'
     start_date_str = request.args.get('start_date')
@@ -1184,8 +1167,8 @@ def get_category_breakdown():
         Category.type,
         func.sum(Transaction.amount)
     ).join(Transaction).filter(
-        Transaction.user_id == current_user.id,
-        Category.user_id == current_user.id # 確保類別也歸屬於當前使用者
+        Transaction.user_id == get_jwt_identity(),
+        Category.user_id == get_jwt_identity() # 確保類別也歸屬於當前使用者
     )
 
     if transaction_type in ['income', 'expense']:
@@ -1218,13 +1201,13 @@ def get_category_breakdown():
 
 
 @app.route('/api/summary/trend', methods=['GET'])
-@login_required
+@jwt_required()
 def get_trend_data():
     interval = request.args.get('interval', 'month')
     start_date_str = request.args.get('start_date')
     end_date_str = request.args.get('end_date')
 
-    query = Transaction.query.filter_by(user_id=current_user.id)
+    query = Transaction.query.filter_by(user_id=get_jwt_identity())
 
     if start_date_str:
         try:
@@ -1278,7 +1261,7 @@ def get_trend_data():
 # --- 使用者設定 API ---
 
 @app.route('/api/user/username', methods=['PUT'])
-@login_required
+@jwt_required()
 def update_username():
     data = request.get_json()
     new_username = data.get('new_username')
@@ -1289,16 +1272,18 @@ def update_username():
     if User.query.filter_by(username=new_username).first():
         return jsonify({"error": "該使用者名稱已被使用"}), 409 # Conflict
 
-    current_user.username = new_username
+    user = User.query.get(get_jwt_identity())
+    user.username = new_username
+
     try:
         db.session.commit()
-        return jsonify({"message": "使用者名稱更新成功", "user": current_user.to_dict()}), 200
+        return jsonify({"message": "使用者名稱更新成功", "user": user.to_dict()}), 200
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": "使用者名稱更新失敗: " + str(e)}), 500
 
 @app.route('/api/user/password', methods=['PUT'])
-@login_required
+@jwt_required()
 def update_password():
     data = request.get_json()
     old_password = data.get('old_password')
@@ -1307,23 +1292,25 @@ def update_password():
     if not old_password or not new_password:
         return jsonify({"error": "舊密碼和新密碼都為必填項"}), 400
 
-    if not current_user.check_password(old_password):
+    user = User.query.get(get_jwt_identity())
+    if not user.check_password(old_password):
         return jsonify({"error": "舊密碼不正確"}), 401 # Unauthorized
 
-    current_user.set_password(new_password)
+    user.set_password(new_password)
     try:
         db.session.commit()
         return jsonify({"message": "密碼更新成功"}), 200
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": "密碼更新失敗: " + str(e)}), 500
+
 # 假設你用 Flask
 @app.route('/api/transactions/summary')
-@login_required
+@jwt_required()
 def transactions_summary():
     # 查詢當前登入使用者的收入、支出
-    total_income = db.session.query(func.sum(Transaction.amount)).filter_by(user_id=current_user.id, type='income').scalar() or 0
-    total_expense = db.session.query(func.sum(Transaction.amount)).filter_by(user_id=current_user.id, type='expense').scalar() or 0
+    total_income = db.session.query(func.sum(Transaction.amount)).filter_by(user_id=get_jwt_identity(), type='income').scalar() or 0
+    total_expense = db.session.query(func.sum(Transaction.amount)).filter_by(user_id=get_jwt_identity(), type='expense').scalar() or 0
     balance = total_income - total_expense
     return jsonify({
         "income": total_income,

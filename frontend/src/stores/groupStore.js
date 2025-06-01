@@ -1,8 +1,6 @@
-// client/src/stores/groupStore.js
 import { defineStore } from "pinia";
 import axios from "axios";
 import { useNotificationStore } from "./notificationStore";
-
 import { API_BASE_URL } from "./config";
 
 export const useGroupStore = defineStore("group", {
@@ -14,15 +12,21 @@ export const useGroupStore = defineStore("group", {
     error: null,
   }),
   actions: {
+    // 取得 JWT token 的 header
+    getAuthHeaders() {
+      const token = localStorage.getItem("access_token");
+      return token ? { Authorization: `Bearer ${token}` } : {};
+    },
+
     async inviteMember(groupId, username) {
       this.isLoading = true;
-      this.error = null; // 清除全局錯誤
+      this.error = null;
       try {
         const response = await axios.post(
           `${API_BASE_URL}/groups/${groupId}/invite`,
           { username },
           {
-            withCredentials: true,
+            headers: this.getAuthHeaders(),
           }
         );
         useNotificationStore().showNotification(
@@ -31,9 +35,9 @@ export const useGroupStore = defineStore("group", {
         );
         return { success: true };
       } catch (err) {
-        this.error = err.response?.data?.error || "發送邀請失敗。"; // 全局錯誤，用於外部組件
+        this.error = err.response?.data?.error || "發送邀請失敗。";
         console.error("Invite member error:", err);
-        return { success: false, error: this.error }; // 返回錯誤給調用者
+        return { success: false, error: this.error };
       } finally {
         this.isLoading = false;
       }
@@ -44,7 +48,7 @@ export const useGroupStore = defineStore("group", {
       this.error = null;
       try {
         const response = await axios.get(`${API_BASE_URL}/groups`, {
-          withCredentials: true,
+          headers: this.getAuthHeaders(),
         });
         this.groups = response.data;
       } catch (err) {
@@ -62,7 +66,7 @@ export const useGroupStore = defineStore("group", {
       this.error = null;
       try {
         const response = await axios.get(`${API_BASE_URL}/groups/${groupId}`, {
-          withCredentials: true,
+          headers: this.getAuthHeaders(),
         });
         this.currentGroup = response.data;
       } catch (err) {
@@ -81,9 +85,9 @@ export const useGroupStore = defineStore("group", {
       this.error = null;
       try {
         const response = await axios.post(`${API_BASE_URL}/groups`, groupData, {
-          withCredentials: true,
+          headers: this.getAuthHeaders(),
         });
-        this.groups.push(response.data.group); // 將新群組添加到列表
+        this.groups.push(response.data.group);
         useNotificationStore().showNotification("群組創建成功！", "success");
         return { success: true, group: response.data.group };
       } catch (err) {
@@ -101,7 +105,7 @@ export const useGroupStore = defineStore("group", {
       this.error = null;
       try {
         const response = await axios.get(`${API_BASE_URL}/invitations`, {
-          withCredentials: true,
+          headers: this.getAuthHeaders(),
         });
         this.invitations = response.data;
       } catch (err) {
@@ -122,10 +126,9 @@ export const useGroupStore = defineStore("group", {
           `${API_BASE_URL}/invitations/${invitationId}/accept`,
           {},
           {
-            withCredentials: true,
+            headers: this.getAuthHeaders(),
           }
         );
-        // 移除已接受的邀請，並重新載入群組列表
         this.invitations = this.invitations.filter(
           (inv) => inv.id !== invitationId
         );
@@ -154,10 +157,9 @@ export const useGroupStore = defineStore("group", {
           `${API_BASE_URL}/invitations/${invitationId}/reject`,
           {},
           {
-            withCredentials: true,
+            headers: this.getAuthHeaders(),
           }
         );
-        // 移除已拒絕的邀請
         this.invitations = this.invitations.filter(
           (inv) => inv.id !== invitationId
         );
