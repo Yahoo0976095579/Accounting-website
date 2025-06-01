@@ -6,7 +6,7 @@
 
 部屬使用 Vercel 部屬前端，後端用 Render，資料庫用 Render 內的 postgresql
 
-網站網址為:https://accounting-website-seven.vercel.app/
+網站網址為:https://yahoo0976095579.github.io/Accounting-website/
 (最下方有預覽圖片)
 
 ---
