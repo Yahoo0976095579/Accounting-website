@@ -20,18 +20,18 @@
       <div class="flex items-center justify-center space-x-4">
         <button
           type="button"
-          @click="cancel"
-          class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-        >
-          取消
-        </button>
-        <button
-          type="button"
           :class="confirmButtonClass"
           @click="confirm"
           class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
         >
           {{ confirmText }}
+        </button>
+        <button
+          type="button"
+          @click="cancel"
+          class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+        >
+          取消
         </button>
       </div>
     </div>
