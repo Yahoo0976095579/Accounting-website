@@ -549,10 +549,10 @@
 
 <!-- client/src/views/Dashboard.vue (在 <script setup> 內部) -->
 <script setup>
-import { ref, onMounted, reactive, watch } from "vue"; // 移除 computed 導入
-import { useAuthStore } from "../stores/authStore";
+import { ref, onMounted, reactive, watch } from "vue";
+import { useAuthStore } from "../stores/authStore"; // 確保這個路徑正確
 import { useSummaryStore } from "../stores/summaryStore"; // 確保這個路徑正確
-import LoadingSpinner from "../components/LoadingSpinner.vue"; // <-- 新增導入
+import LoadingSpinner from "../components/LoadingSpinner.vue";
 
 const authStore = useAuthStore();
 const summaryStore = useSummaryStore();
@@ -565,14 +565,53 @@ const chartFilters = reactive({
 
 // 統一的數據載入函數
 async function loadDashboardData() {
-  // 修改回 loadDashboardData
-  console.log("Loading dashboard data with filters:", chartFilters);
-  await summaryStore.loadAllDashboardData(chartFilters); // 調用 summaryStore 中的新方法
-  console.log("Dashboard data loaded.");
+  // 在這裡獲取 groupId
+  // 假設你的 authStore 儲存了當前用戶的群組 ID，例如 authStore.user.current_group_id
+  // 或者你可能需要從 authStore.user.groups 陣列中取第一個群組的 ID
+  const currentGroupId =
+    authStore.user?.default_group_id || authStore.user?.groups?.[0]?.id; // 範例：獲取群組 ID 的邏輯
+
+  if (!currentGroupId) {
+    console.error(
+      "無法獲取群組 ID，無法載入儀表板資料。請確認用戶已登入且有群組資訊。"
+    );
+    // 這裡可以設置一個錯誤狀態，或者引導用戶到群組選擇/創建頁面
+    summaryStore.fetchError =
+      "Group ID is missing. Please select or create a group.";
+    return; // 終止執行
+  }
+
+  console.log(
+    `Loading dashboard data for group ID: ${currentGroupId} with filters:`,
+    chartFilters
+  );
+
+  try {
+    // 將 currentGroupId 作為第一個參數傳遞
+    await summaryStore.loadAllDashboardData(currentGroupId, chartFilters);
+    console.log("Dashboard data loaded.");
+  } catch (err) {
+    console.error("Load all dashboard data error:", err);
+    // summaryStore 內部應該已經捕獲並設置了 fetchError，這裡可以選擇進一步處理
+  }
 }
 
 onMounted(async () => {
   console.log("Dashboard onMounted: Initializing dashboard data.");
+  // 確保 authStore 中的用戶資訊已經載入
+  // 如果 authStore.user 是異步載入的，你可能需要等待它
+  // 或者在登入成功後，將 group_id 存入某個響應式變數
+
+  // 這裡需要確保 authStore.user 已經有值
+  // 如果 authStore 在初始化時會異步載入用戶資料，你可能需要等待 authStore.user 有值後再調用 loadDashboardData
+  // 例如，如果 authStore 有一個 isUserLoaded 的屬性
+  // watchEffect(() => {
+  //   if (authStore.isUserLoaded) {
+  //     loadDashboardData();
+  //   }
+  // });
+
+  // 目前先假設 authStore.user 在 onMounted 時是可用的
   await loadDashboardData(); // 初始載入數據
 });
 

@@ -36,20 +36,31 @@ export const useSummaryStore = defineStore("summary", {
       return token ? { Authorization: `Bearer ${token}` } : {};
     },
 
-    async loadAllDashboardData(chartFilters) {
+    // 修正點 1: 接收 groupId 參數
+    async loadAllDashboardData(groupId, chartFilters) {
       this.isLoading = true;
       this.fetchError = null;
       this.isDataReady = false;
 
+      // 檢查 groupId 是否存在
+      if (!groupId) {
+        this.fetchError = "Group ID is required to load dashboard data.";
+        console.error(this.fetchError);
+        this.isLoading = false;
+        this.isDataReady = false;
+        return; // 終止執行
+      }
+
       try {
         await Promise.all([
-          this.fetchOverallSummaryInternal(),
-          this.fetchTrendDataInternal(chartFilters),
-          this.fetchCategoryBreakdownInternal({
+          // 修正點 2: 將 groupId 傳遞給內部函數
+          this.fetchOverallSummaryInternal(groupId),
+          this.fetchTrendDataInternal(groupId, chartFilters),
+          this.fetchCategoryBreakdownInternal(groupId, {
             type: "expense",
             ...chartFilters,
           }),
-          this.fetchIncomeCategoryBreakdownInternal(chartFilters),
+          this.fetchIncomeCategoryBreakdownInternal(groupId, chartFilters),
         ]);
         this.isDataReady = true;
       } catch (err) {
@@ -62,11 +73,15 @@ export const useSummaryStore = defineStore("summary", {
       }
     },
 
-    async fetchOverallSummaryInternal() {
+    // 修正點 3: 接收 groupId 並修正 URL
+    async fetchOverallSummaryInternal(groupId) {
       try {
-        const response = await axios.get(`${API_BASE_URL}/summary`, {
-          headers: this.getAuthHeaders(),
-        });
+        const response = await axios.get(
+          `${API_BASE_URL}/groups/${groupId}/summary`,
+          {
+            headers: this.getAuthHeaders(),
+          }
+        );
         this.totalIncome = response.data.total_income;
         this.totalExpense = response.data.total_expense;
         this.balance = response.data.balance;
@@ -75,10 +90,11 @@ export const useSummaryStore = defineStore("summary", {
       }
     },
 
-    async fetchCategoryBreakdownInternal(filters) {
+    // 修正點 4: 接收 groupId 並修正 URL
+    async fetchCategoryBreakdownInternal(groupId, filters) {
       try {
         const response = await axios.get(
-          `${API_BASE_URL}/summary/category_breakdown`,
+          `${API_BASE_URL}/groups/${groupId}/summary/category_breakdown`, // 修正 URL
           { params: cleanFilters(filters), headers: this.getAuthHeaders() }
         );
         this.categoryBreakdown = response.data;
@@ -87,22 +103,28 @@ export const useSummaryStore = defineStore("summary", {
       }
     },
 
-    async fetchTrendDataInternal(filters) {
+    // 修正點 5: 接收 groupId 並修正 URL
+    async fetchTrendDataInternal(groupId, filters) {
       try {
-        const response = await axios.get(`${API_BASE_URL}/summary/trend`, {
-          params: cleanFilters(filters),
-          headers: this.getAuthHeaders(),
-        });
+        const response = await axios.get(
+          `${API_BASE_URL}/groups/${groupId}/summary/trend`,
+          {
+            // 修正 URL
+            params: cleanFilters(filters),
+            headers: this.getAuthHeaders(),
+          }
+        );
         this.trendData = response.data;
       } catch (err) {
         throw err;
       }
     },
 
-    async fetchIncomeCategoryBreakdownInternal(filters) {
+    // 修正點 6: 接收 groupId 並修正 URL (此函數也調用 fetchCategoryBreakdownInternal，但其 URL 也已修正)
+    async fetchIncomeCategoryBreakdownInternal(groupId, filters) {
       try {
         const response = await axios.get(
-          `${API_BASE_URL}/summary/category_breakdown`,
+          `${API_BASE_URL}/groups/${groupId}/summary/category_breakdown`, // 修正 URL
           {
             params: cleanFilters({ ...filters, type: "income" }),
             headers: this.getAuthHeaders(),
