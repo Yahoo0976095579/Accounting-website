@@ -350,11 +350,10 @@ def login():
     else:
         return jsonify({"error": "名稱或密碼錯誤"}), 401
 
-@app.route('/api/logout', methods=['GET']) # 確保是 GET 方法
+@app.route('/api/logout', methods=['GET'])
 @jwt_required()
 def logout():
     return jsonify({"message": "Logged out successfully"}), 200
-
 @app.route('/api/user', methods=['GET'])
 @jwt_required()
 def get_current_user():
@@ -819,17 +818,18 @@ def get_group_category_breakdown(group_id):
         query = query.filter(GroupTransaction.type == transaction_type)
     if start_date_str:
         try:
-            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
-            query = query.filter(GroupTransaction.date >= start_date)
+            if start_date_str.strip() != "":
+                start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+                query = query.filter(GroupTransaction.date >= start_date)
         except ValueError:
             return jsonify({"error": "Invalid start_date format. Use YYYY-MM-DD."}), 400
     if end_date_str:
         try:
-            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
-            query = query.filter(GroupTransaction.date <= end_date)
+            if end_date_str.strip() != "":
+                end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+                query = query.filter(GroupTransaction.date <= end_date)
         except ValueError:
             return jsonify({"error": "Invalid end_date format. Use YYYY-MM-DD."}), 400
-
     category_summary = query.group_by(Category.name, Category.type).all()
 
     summary_by_category = []
