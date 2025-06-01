@@ -191,7 +191,7 @@
               @click="resetChartFilters"
               class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm transition duration-200 ease-in-out flex-1"
             >
-              重置1
+              重置
             </button>
           </div>
         </div>
