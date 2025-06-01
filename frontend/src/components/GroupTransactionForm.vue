@@ -121,13 +121,6 @@
 
         <div class="flex items-center justify-center space-x-4">
           <button
-            type="button"
-            @click="emit('close')"
-            class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-          >
-            取消
-          </button>
-          <button
             type="submit"
             class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
             :disabled="
@@ -140,6 +133,13 @@
                 ? "儲存中..."
                 : "儲存"
             }}
+          </button>
+          <button
+            type="button"
+            @click="emit('close')"
+            class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+          >
+            取消
           </button>
         </div>
       </form>
