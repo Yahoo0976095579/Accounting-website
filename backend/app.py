@@ -1485,6 +1485,63 @@ def transactions_summary():
         "balance": balance
     })
 
+# ----------------------------------------------------
+# 新增：刪除帳號 API
+# ----------------------------------------------------
+@app.route('/api/user', methods=['DELETE'])
+@jwt_required()
+def delete_user_account():
+    user_id_to_delete = get_jwt_identity()
+    user = User.query.get(user_id_to_delete)
+
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    try:
+        # 1. 檢查用戶是否是任何群組的成員 (無論角色或狀態，只要有 GroupMember 記錄就不能刪除)
+        # 排除自己的創建的那個群組
+        active_memberships_count = GroupMember.query.filter_by(user_id=user_id_to_delete, status='accepted').count()
+        if active_memberships_count > 0:
+            return jsonify({"error": "您仍是某些群組的活躍成員，請先退出所有群組。"}), 400
+
+        # 2. 檢查用戶是否是任何群組的創建者
+        # 這個檢查要小心，因為如果用戶是創建者，但群組中沒有其他成員，並且沒有交易，
+        # 那理論上應該允許自動刪除該群組。
+        # 為了簡化，如果創建了任何群組，就要求用戶先解散。
+        created_groups_count = Group.query.filter_by(created_by_user_id=user_id_to_delete).count()
+        if created_groups_count > 0:
+            return jsonify({"error": "您仍創建了某些群組，請先解散所有由您創建的群組。"}), 400
+
+        # 如果通過了上述檢查，說明用戶沒有群組成員身份，也沒有創建任何群組。
+        # 此時可以安全地刪除用戶及其個人相關數據。
+        # 確保在模型中設置了 cascade='all, delete-orphan'，或者在這裡手動刪除：
+        # - Category (用戶的個人類別)
+        # - Transaction (用戶的個人交易)
+        # - Invitation (用戶發送的或接收的邀請，這部分通常也會被級聯刪除，或者根據業務邏輯處理)
+        # - GroupTransaction (用戶記錄的群組交易，這部分也會被級聯刪除)
+
+        # 假設在 User 模型中，categories 和 transactions 關係設置了 cascade='all, delete-orphan'
+        # 示例：categories = db.relationship('Category', backref='user', lazy=True, cascade='all, delete-orphan')
+        # 如果沒有，則需要手動執行：
+        Transaction.query.filter_by(user_id=user_id_to_delete).delete(synchronize_session=False)
+        Category.query.filter_by(user_id=user_id_to_delete).delete(synchronize_session=False)
+        
+        # 刪除發送和接收的邀請 (即使 Invitation 模型沒有 cascade，這裡手動刪除確保乾淨)
+        Invitation.query.filter_by(invited_by_user_id=user_id_to_delete).delete(synchronize_session=False)
+        Invitation.query.filter_by(invited_user_id=user_id_to_delete).delete(synchronize_session=False)
+        
+        # 刪除用戶記錄的群組交易
+        GroupTransaction.query.filter_by(created_by_user_id=user_id_to_delete).delete(synchronize_session=False)
+
+        db.session.delete(user)
+        db.session.commit()
+
+        return jsonify({"message": "帳號刪除成功"}), 204 # 204 No Content
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error deleting user account: {e}")
+        return jsonify({"error": "刪除帳號失敗: " + str(e)}), 500
+
 # 運行應用程式
 if __name__ == '__main__':
     # Flask-Login 的 Session Protection 預設是 'strong'

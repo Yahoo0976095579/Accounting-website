@@ -118,6 +118,8 @@
         <h2 class="text-2xl font-bold mb-4 text-red-700">刪除帳號</h2>
         <p class="text-gray-600 mb-4">
           此操作將永久刪除您的帳號及所有相關數據。請謹慎操作。
+          <br />
+          **注意：您必須先退出所有群組，並解散所有由您創建的群組才能刪除帳號。**
         </p>
         <div class="flex items-center justify-end">
           <button
@@ -130,18 +132,18 @@
           </button>
         </div>
       </div>
-    </div>
 
-    <!-- 確認刪除帳號模態框 -->
-    <ConfirmationModal
-      v-if="showConfirmDeleteAccountModal"
-      title="刪除帳號確認"
-      message="您確定要永久刪除您的帳號嗎？所有數據將無法恢復。此操作無法撤銷。"
-      confirmText="確認刪除"
-      confirmButtonClass="bg-red-600 hover:bg-red-800 text-white"
-      @confirm="handleDeleteAccountConfirmed"
-      @cancel="handleDeleteAccountCanceled"
-    />
+      <!-- 確認刪除帳號模態框 -->
+      <ConfirmationModal
+        v-if="showConfirmDeleteAccountModal"
+        title="刪除帳號確認"
+        message="您確定要永久刪除您的帳號嗎？所有數據將無法恢復。此操作無法撤銷。"
+        confirmText="確認刪除"
+        confirmButtonClass="bg-red-600 hover:bg-red-800 text-white"
+        @confirm="handleDeleteAccountConfirmed"
+        @cancel="handleDeleteAccountCanceled"
+      />
+    </div>
   </div>
 </template>
 
@@ -228,7 +230,8 @@ const confirmDeleteAccount = () => {
 
 const handleDeleteAccountConfirmed = async () => {
   showConfirmDeleteAccountModal.value = false;
-  await authStore.deleteAccount(); // 這個 action 會處理重定向和通知
+  // authStore.deleteAccount 會處理 API 請求、通知和重定向
+  await authStore.deleteAccount();
 };
 
 const handleDeleteAccountCanceled = () => {

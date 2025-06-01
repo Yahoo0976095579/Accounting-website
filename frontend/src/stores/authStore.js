@@ -193,10 +193,11 @@ export const useAuthStore = defineStore("auth", {
     async deleteAccount() {
       this.isLoading = true;
       this.error = null;
-      const notificationStore = useNotificationStore(); // 實例化通知 Store
+      const notificationStore = useNotificationStore();
 
       try {
-        const response = await axios.delete(`${API_BASE_URL}/user`, {
+        await axios.delete(`${API_BASE_URL}/user`, {
+          // 調用後端新的 DELETE /api/user
           headers: this.getAuthHeaders(),
         });
 
@@ -206,13 +207,16 @@ export const useAuthStore = defineStore("auth", {
         localStorage.removeItem("access_token");
 
         notificationStore.showNotification("帳號已成功刪除。", "success");
-        router.push("/register"); // 或重定向到登入頁面
+        router.push("/register"); // 重定向到註冊頁面或登入頁面
         return { success: true };
       } catch (err) {
-        this.error = err.response?.data?.error || "刪除帳號失敗。";
-        notificationStore.showNotification(this.error, "error");
+        // === 修正點：使用 notificationStore 顯示錯誤 ===
+        const errorMessage = err.response?.data?.error || "刪除帳號失敗。";
+        notificationStore.showNotification(errorMessage, "error");
+        this.error = null; // 確保清除任何可能導致全頁顯示的錯誤
+        // ===============================================
         console.error("Delete account error:", err);
-        return { success: false, error: this.error };
+        return { success: false, error: errorMessage };
       } finally {
         this.isLoading = false;
       }
