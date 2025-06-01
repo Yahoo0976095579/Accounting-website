@@ -1187,14 +1187,16 @@ def get_category_breakdown():
         query = query.filter(Transaction.type == transaction_type)
     if start_date_str:
         try:
-            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
-            query = query.filter(Transaction.date >= start_date)
+            if start_date_str.strip() != "":
+                start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+                query = query.filter(Transaction.date >= start_date)
         except ValueError:
             return jsonify({"error": "Invalid start_date format. Use YYYY-MM-DD."}), 400
     if end_date_str:
         try:
-            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
-            query = query.filter(Transaction.date <= end_date)
+            if end_date_str.strip() != "":
+                end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+                query = query.filter(Transaction.date <= end_date)
         except ValueError:
             return jsonify({"error": "Invalid end_date format. Use YYYY-MM-DD."}), 400
 
@@ -1223,14 +1225,16 @@ def get_trend_data():
 
     if start_date_str:
         try:
-            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
-            query = query.filter(Transaction.date >= start_date)
+            if start_date_str.strip() != "":
+                start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+                query = query.filter(Transaction.date >= start_date)
         except ValueError:
             return jsonify({"error": "Invalid start_date format. Use YYYY-MM-DD."}), 400
     if end_date_str:
         try:
-            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
-            query = query.filter(Transaction.date <= end_date)
+            if end_date_str.strip() != "":
+                end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+                query = query.filter(Transaction.date <= end_date)
         except ValueError:
             return jsonify({"error": "Invalid end_date format. Use YYYY-MM-DD."}), 400
 
