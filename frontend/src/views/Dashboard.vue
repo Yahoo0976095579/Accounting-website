@@ -183,13 +183,13 @@
           <div class="col-span-full flex flex-row gap-2 pt-2">
             <button
               @click="loadDashboardData"
-              class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm transition duration-200 ease-in-out flex-1"
+              class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm transition duration-200 ease-in-out flex-1 md:flex-none md:w-auto md:max-w-[120px]"
             >
               搜尋
             </button>
             <button
               @click="resetChartFilters"
-              class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm transition duration-200 ease-in-out flex-1"
+              class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm transition duration-200 ease-in-out flex-1 md:flex-none md:w-auto md:max-w-[120px]"
             >
               重置
             </button>
