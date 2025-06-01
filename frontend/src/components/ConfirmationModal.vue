@@ -17,7 +17,7 @@
           </p>
         </div>
       </div>
-      <div class="mt-5 sm:mt-6 sm:flex sm:flex-row-reverse">
+      <div class="flex items-center justify-center space-x-4">
         <button
           type="button"
           @click="cancel"
