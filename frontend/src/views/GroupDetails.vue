@@ -218,9 +218,8 @@
               class="w-full shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
             >
               <option value="">所有類別</option>
-              <!-- 修正點：v-for 迭代 filteredCategories -->
               <option
-                v-for="category in filteredCategories"
+                v-for="category in categoryStore.categories"
                 :key="category.id"
                 :value="category.id"
               >
@@ -594,10 +593,7 @@
 
 <script setup>
 // ... (script setup 內容與之前相同，不需要修改) ...
-// === 修正點：確保從 'vue' 導入 computed ===
-import { ref, onMounted, reactive, watch, computed } from "vue";
-// ==========================================
-
+import { ref, onMounted, reactive, watch } from "vue";
 import { useRoute } from "vue-router";
 import { useGroupStore } from "../stores/groupStore";
 import { useGroupTransactionStore } from "../stores/groupTransactionStore";
