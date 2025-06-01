@@ -284,33 +284,31 @@
               class="w-full shadow appearance-none border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
             />
           </div>
-          <!-- 搜尋/重置按鈕 -->
+          <!-- 搜尋/重置 和 新增群組交易按鈕 - 修正後的佈局 -->
+          <!-- 在手機上：佔滿兩欄，兩個按鈕左右均分。
+               在 MD 螢幕及以上：佔滿兩欄，三個按鈕左右均分，但有最大寬度限制。 -->
           <div class="col-span-full flex flex-row gap-2 pt-2">
             <button
               @click="applyGroupFilters"
               type="button"
-              class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm transition duration-200 ease-in-out flex-1"
+              class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm transition duration-200 ease-in-out flex-1 md:w-auto md:max-w-[120px]"
             >
               搜尋
             </button>
             <button
               @click="resetGroupFilters"
               type="button"
-              class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm transition duration-200 ease-in-out flex-1"
+              class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm transition duration-200 ease-in-out flex-1 md:w-auto md:max-w-[120px]"
             >
               重置篩選
             </button>
+            <button
+              @click="openAddGroupTransactionModal"
+              class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm sm:text-base transition duration-200 ease-in-out flex-1 md:w-auto md:max-w-[140px]"
+            >
+              新增群組交易
+            </button>
           </div>
-        </div>
-
-        <!-- 新增群組交易按鈕 (位置調整到篩選器下方) -->
-        <div class="mb-6">
-          <button
-            @click="openAddGroupTransactionModal"
-            class="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-200 ease-in-out text-base"
-          >
-            新增群組交易
-          </button>
         </div>
 
         <!-- 交易列表 -->
