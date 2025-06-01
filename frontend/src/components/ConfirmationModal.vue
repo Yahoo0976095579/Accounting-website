@@ -17,7 +17,7 @@
           </p>
         </div>
       </div>
-      <div class="flex items-center justify-center space-x-4">
+      <div class="flex items-center justify-center space-x-4 mt-6">
         <button
           type="button"
           :class="confirmButtonClass"
