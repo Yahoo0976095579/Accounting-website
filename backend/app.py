@@ -612,6 +612,65 @@ def reject_invitation(invitation_id):
         return jsonify({"error": "拒絕邀請失敗: " + str(e)}), 500
 
 # --- 群組交易 API (簡化版，詳細實現將在後續步驟) ---
+
+#移除成員
+# app.py (在群組管理 API 區塊內，例如在 invite_member 附近)
+
+@app.route('/api/groups/<int:group_id>/members/<int:member_id>', methods=['DELETE'])
+@jwt_required()
+def remove_group_member(group_id, member_id):
+    current_user_id = get_jwt_identity()
+
+    # 1. 檢查操作者是否為群組管理員
+    admin_member = GroupMember.query.filter_by(
+        group_id=group_id,
+        user_id=current_user_id,
+        role='admin',
+        status='accepted'
+    ).first()
+    if not admin_member:
+        return jsonify({"error": "群組未找到或您無權執行此操作"}), 403 # Forbidden
+
+    # 2. 獲取要被移除的成員記錄
+    member_to_remove = GroupMember.query.filter_by(
+        group_id=group_id,
+        user_id=member_id, # member_id 這裡其實是 user_id
+        status='accepted' # 只能移除活躍成員
+    ).first()
+
+    if not member_to_remove:
+        return jsonify({"error": "成員未找到或不是該群組的活躍成員"}), 404
+
+    # 3. 不允許管理員移除自己 (如果他是群組的唯一管理員)
+    if member_to_remove.user_id == current_user_id:
+        # 如果是唯一管理員，且群組還有其他成員，則不允許移除自己
+        if member_to_remove.role == 'admin' and \
+           GroupMember.query.filter_by(group_id=group_id, role='admin', status='accepted').count() == 1 and \
+           GroupMember.query.filter_by(group_id=group_id, status='accepted').count() > 1:
+            return jsonify({"error": "您是該群組的唯一管理員，請先轉移管理權限再退出。"}), 400
+        # 允許自己退出 (leave group)，這個在 /api/groups/<int:group_id>/leave 處理更合適
+        # 這個 API 應該只用於管理員移除他人
+        return jsonify({"error": "無法透過此介面移除自己。請使用 '退出群組' 功能。"}), 400
+
+
+    # 4. 不允許移除群組的唯一管理員 (如果群組還有其他非管理員成員)
+    # 判斷是否只剩一個管理員，且這個管理員就是 `member_to_remove`
+    if member_to_remove.role == 'admin':
+        active_admins = GroupMember.query.filter_by(group_id=group_id, role='admin', status='accepted').count()
+        if active_admins == 1:
+            # 如果被移除的是唯一的管理員，且該群組還有其他成員
+            if GroupMember.query.filter_by(group_id=group_id, status='accepted').count() > 1:
+                return jsonify({"error": "無法移除群組的唯一管理員，請先指定其他管理員。"}), 400
+
+    try:
+        db.session.delete(member_to_remove)
+        db.session.commit()
+        return jsonify({"message": "成員已成功從群組中移除"}), 200
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error removing group member: {e}")
+        return jsonify({"error": "移除成員失敗: " + str(e)}), 500
+
 # 這些 API 只是佔位符，確保其存在且受到保護。
 # 細節實現將與個人交易類似，但需考慮 group_id 和權限。
 

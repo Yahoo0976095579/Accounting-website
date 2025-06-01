@@ -1,28 +1,35 @@
 <!-- client/src/components/ConfirmationModal.vue -->
 <template>
   <div
-    class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-50"
+    class="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center p-4 z-50"
+    @click.self="cancel"
   >
     <div
-      class="relative p-8 bg-white w-full max-w-sm mx-auto rounded-lg shadow-xl"
-      @click.stop
+      class="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm mx-auto transform transition-all sm:my-8 sm:align-middle"
     >
-      <h3 class="text-xl font-bold mb-4 text-center text-gray-800">
-        {{ title }}
-      </h3>
-      <p class="text-gray-700 mb-6 text-center">{{ message }}</p>
-
-      <div class="flex justify-center space-x-4">
+      <div class="text-center">
+        <h3 class="text-lg leading-6 font-medium text-gray-900 mb-2">
+          {{ title }}
+        </h3>
+        <div class="mt-2">
+          <p class="text-sm text-gray-500">
+            {{ message }}
+          </p>
+        </div>
+      </div>
+      <div class="mt-5 sm:mt-6 sm:flex sm:flex-row-reverse">
         <button
-          @click="emit('confirm')"
+          type="button"
           :class="confirmButtonClass"
-          class="font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+          @click="confirm"
+          class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 text-base font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 sm:ml-3 sm:w-auto sm:text-sm transition-colors duration-200"
         >
           {{ confirmText }}
         </button>
         <button
-          @click="emit('cancel')"
-          class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+          type="button"
+          @click="cancel"
+          class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:w-auto sm:text-sm transition-colors duration-200"
         >
           取消
         </button>
@@ -32,37 +39,34 @@
 </template>
 
 <script setup>
-import { computed } from "vue";
+import { defineProps, defineEmits } from "vue";
 
 const props = defineProps({
   title: {
     type: String,
-    default: "確認操作",
+    required: true,
   },
   message: {
     type: String,
-    default: "您確定要執行此操作嗎？",
+    required: true,
   },
   confirmText: {
     type: String,
-    default: "確定",
+    default: "確認",
   },
   confirmButtonClass: {
     type: String,
-    default: "bg-red-500 hover:bg-red-700 text-white", // 預設紅色危險操作
+    default: "bg-blue-600 hover:bg-blue-700",
   },
 });
 
 const emit = defineEmits(["confirm", "cancel"]);
-</script>
 
-<style scoped>
-/* 彈窗背景和定位樣式，與 TransactionForm 類似 */
-.fixed {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-}
-</style>
+const confirm = () => {
+  emit("confirm");
+};
+
+const cancel = () => {
+  emit("cancel");
+};
+</script>

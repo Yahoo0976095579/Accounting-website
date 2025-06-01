@@ -2,6 +2,7 @@ import { defineStore } from "pinia";
 import axios from "axios";
 import { useNotificationStore } from "./notificationStore";
 import { API_BASE_URL } from "./config";
+import router from "../router"; // 導入 router，因為刪除群組後需要重定向
 
 export const useGroupStore = defineStore("group", {
   state: () => ({
@@ -173,6 +174,62 @@ export const useGroupStore = defineStore("group", {
           err.response?.data?.error || "Failed to reject invitation.";
         useNotificationStore().showNotification(this.error, "error");
         console.error("Reject invitation error:", err);
+        return false;
+      } finally {
+        this.isLoading = false;
+      }
+    },
+    // 新增：刪除群組
+    async deleteGroup(groupId) {
+      this.isLoading = true;
+      this.error = null;
+      const notificationStore = useNotificationStore();
+      try {
+        await axios.delete(`${API_BASE_URL}/groups/${groupId}`, {
+          headers: this.getAuthHeaders(),
+        });
+        this.groups = this.groups.filter((group) => group.id !== groupId); // 從列表中移除
+        this.currentGroup = null; // 清除當前群組詳情
+        notificationStore.showNotification("群組已成功刪除！", "success");
+        router.push("/groups"); // 重定向到群組列表頁面
+        return true;
+      } catch (err) {
+        this.error = err.response?.data?.error || "刪除群組失敗。";
+        notificationStore.showNotification(this.error, "error");
+        console.error("Delete group error:", err);
+        return false;
+      } finally {
+        this.isLoading = false;
+      }
+    },
+
+    // 新增：移除群組成員
+    async removeMember(groupId, memberId) {
+      this.isLoading = true; // 可能需要一個更細粒度的 loading 狀態，例如 isRemovingMember
+      this.error = null;
+      const notificationStore = useNotificationStore();
+      try {
+        await axios.delete(
+          `${API_BASE_URL}/groups/${groupId}/members/${memberId}`,
+          {
+            headers: this.getAuthHeaders(),
+          }
+        );
+        // 成功後刷新當前群組的成員列表
+        if (this.currentGroup && this.currentGroup.id === groupId) {
+          this.currentGroup.members = this.currentGroup.members.filter(
+            (member) => member.id !== memberId
+          );
+          // 同步更新成員計數
+          this.currentGroup.member_count = this.currentGroup.members.length;
+        }
+        // 也可以考慮重新調用 fetchGroupDetails(groupId) 來獲取最新數據
+        notificationStore.showNotification("成員已成功移除！", "success");
+        return true;
+      } catch (err) {
+        this.error = err.response?.data?.error || "移除成員失敗。";
+        notificationStore.showNotification(this.error, "error");
+        console.error("Remove member error:", err);
         return false;
       } finally {
         this.isLoading = false;

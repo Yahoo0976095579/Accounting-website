@@ -190,5 +190,32 @@ export const useAuthStore = defineStore("auth", {
         this.isLoading = false;
       }
     },
+    async deleteAccount() {
+      this.isLoading = true;
+      this.error = null;
+      const notificationStore = useNotificationStore(); // 實例化通知 Store
+
+      try {
+        const response = await axios.delete(`${API_BASE_URL}/user`, {
+          headers: this.getAuthHeaders(),
+        });
+
+        // 成功刪除後，清除所有用戶數據並重定向
+        this.user = null;
+        localStorage.removeItem("user");
+        localStorage.removeItem("access_token");
+
+        notificationStore.showNotification("帳號已成功刪除。", "success");
+        router.push("/register"); // 或重定向到登入頁面
+        return { success: true };
+      } catch (err) {
+        this.error = err.response?.data?.error || "刪除帳號失敗。";
+        notificationStore.showNotification(this.error, "error");
+        console.error("Delete account error:", err);
+        return { success: false, error: this.error };
+      } finally {
+        this.isLoading = false;
+      }
+    },
   },
 });

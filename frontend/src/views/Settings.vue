@@ -111,7 +111,37 @@
           </div>
         </form>
       </div>
+      <!-- 刪除帳號 -->
+      <div
+        class="bg-white p-6 rounded-lg shadow-md max-w-xl mx-auto mt-8 border-t-4 border-red-500"
+      >
+        <h2 class="text-2xl font-bold mb-4 text-red-700">刪除帳號</h2>
+        <p class="text-gray-600 mb-4">
+          此操作將永久刪除您的帳號及所有相關數據。請謹慎操作。
+        </p>
+        <div class="flex items-center justify-end">
+          <button
+            @click="confirmDeleteAccount"
+            type="button"
+            class="bg-red-600 hover:bg-red-800 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+            :disabled="authStore.isLoading"
+          >
+            刪除我的帳號
+          </button>
+        </div>
+      </div>
     </div>
+
+    <!-- 確認刪除帳號模態框 -->
+    <ConfirmationModal
+      v-if="showConfirmDeleteAccountModal"
+      title="刪除帳號確認"
+      message="您確定要永久刪除您的帳號嗎？所有數據將無法恢復。此操作無法撤銷。"
+      confirmText="確認刪除"
+      confirmButtonClass="bg-red-600 hover:bg-red-800 text-white"
+      @confirm="handleDeleteAccountConfirmed"
+      @cancel="handleDeleteAccountCanceled"
+    />
   </div>
 </template>
 
@@ -119,6 +149,7 @@
 import { ref, watch } from "vue";
 import { useAuthStore } from "../stores/authStore";
 import LoadingSpinner from "../components/LoadingSpinner.vue";
+import ConfirmationModal from "../components/ConfirmationModal.vue"; // 確保你已創建此組件並導入
 
 const authStore = useAuthStore();
 
@@ -126,7 +157,6 @@ const authStore = useAuthStore();
 const newUsername = ref(authStore.user?.username || "");
 const usernameError = ref(null);
 
-// 當 authStore.user 更新時，同步 newUsername
 watch(
   () => authStore.user,
   (newUser) => {
@@ -138,16 +168,13 @@ watch(
 );
 
 const updateUsername = async () => {
-  usernameError.value = null; // 清除錯誤
+  usernameError.value = null;
   if (newUsername.value === authStore.user?.username) {
     usernameError.value = "新的使用者名稱不能與目前的名稱相同。";
     return;
   }
   const result = await authStore.updateUsername(newUsername.value);
-  if (result.success) {
-    // 通知已在 store 中處理
-    // newUsername.value 會由 watch 同步更新
-  } else {
+  if (!result.success) {
     usernameError.value = result.error;
   }
 };
@@ -155,7 +182,7 @@ const updateUsername = async () => {
 // 修改密碼相關
 const oldPassword = ref("");
 const newPassword = ref("");
-const confirmPassword = ref(""); // 新增
+const confirmPassword = ref("");
 const passwordError = ref(null);
 const passwordSuccess = ref(null);
 
@@ -190,5 +217,21 @@ const updatePassword = async () => {
     newPassword.value = "";
     confirmPassword.value = "";
   }
+};
+
+// 刪除帳號相關
+const showConfirmDeleteAccountModal = ref(false);
+
+const confirmDeleteAccount = () => {
+  showConfirmDeleteAccountModal.value = true;
+};
+
+const handleDeleteAccountConfirmed = async () => {
+  showConfirmDeleteAccountModal.value = false;
+  await authStore.deleteAccount(); // 這個 action 會處理重定向和通知
+};
+
+const handleDeleteAccountCanceled = () => {
+  showConfirmDeleteAccountModal.value = false;
 };
 </script>

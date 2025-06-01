@@ -10,6 +10,14 @@
 
     <h1 class="text-3xl font-bold mb-4 text-blue-800">
       {{ groupStore.currentGroup?.name || "群組詳情" }}
+      <!-- 只有管理員能看到刪除群組按鈕 -->
+      <button
+        v-if="groupStore.currentGroup?.your_role === 'admin'"
+        @click="confirmDeleteGroup"
+        class="ml-4 bg-red-600 hover:bg-red-800 text-white font-bold py-1 px-3 rounded text-sm transition"
+      >
+        刪除群組
+      </button>
     </h1>
     <p class="text-gray-600 mb-6">
       {{ groupStore.currentGroup?.description || "無描述" }}
@@ -32,7 +40,6 @@
     </div>
     <div v-else>
       <!-- 群組概覽卡片 -->
-      <!-- filepath: c:\Users\yahoo\OneDrive\Desktop\python程式設計\記帳網站\frontend\src\views\GroupDetails.vue -->
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
         <div
           class="bg-white p-3 sm:p-6 rounded-md sm:rounded-lg shadow text-center"
@@ -103,10 +110,20 @@
             class="py-2 flex justify-between items-center"
           >
             <span class="font-semibold">{{ member.username }}</span>
-            <span class="text-sm text-gray-600 capitalize"
+            <span class="text-sm text-gray-600 capitalize mr-2"
               >({{ member.role }})</span
             >
-            <!-- TODO: 添加移除成員按鈕 (只有管理員且不是自己) -->
+            <!-- 移除成員按鈕 (只有管理員能看到，且不能移除自己) -->
+            <button
+              v-if="
+                groupStore.currentGroup?.your_role === 'admin' &&
+                member.user_id !== authStore.user?.id
+              "
+              @click="confirmRemoveMember(member.user_id, member.username)"
+              class="text-red-600 hover:text-red-900 text-sm ml-auto"
+            >
+              移除
+            </button>
           </li>
         </ul>
       </div>
@@ -481,36 +498,68 @@
         @confirm="handleDeleteGroupTransactionConfirmed"
         @cancel="handleDeleteGroupTransactionCanceled"
       />
+
+      <!-- 新增：確認刪除群組模態框 -->
+      <ConfirmationModal
+        v-if="showConfirmDeleteGroupModal"
+        title="刪除群組確認"
+        message="您確定要永久刪除此群組嗎？此操作無法撤銷，且群組內所有數據將被刪除。請確認群組內沒有其他成員或交易記錄。"
+        confirmText="確認刪除群組"
+        confirmButtonClass="bg-red-600 hover:bg-red-800 text-white"
+        @confirm="handleDeleteGroupConfirmed"
+        @cancel="handleDeleteGroupCanceled"
+      />
+
+      <!-- 新增：確認移除成員模態框 -->
+      <ConfirmationModal
+        v-if="showConfirmRemoveMemberModal"
+        :title="`移除成員 ${memberToRemoveUsername} 確認`"
+        :message="`您確定要將 ${memberToRemoveUsername} 從此群組中移除嗎？`"
+        confirmText="確認移除"
+        confirmButtonClass="bg-red-600 hover:bg-red-800 text-white"
+        @confirm="handleRemoveMemberConfirmed"
+        @cancel="handleRemoveMemberCanceled"
+      />
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, reactive, watch } from "vue";
-import { useRoute } from "vue-router"; // 引入 useRoute
+import { useRoute } from "vue-router";
 import { useGroupStore } from "../stores/groupStore";
-import { useGroupTransactionStore } from "../stores/groupTransactionStore"; // 新增
-import { useCategoryStore } from "../stores/categoryStore"; // 新增
+import { useGroupTransactionStore } from "../stores/groupTransactionStore";
+import { useCategoryStore } from "../stores/categoryStore";
+import { useAuthStore } from "../stores/authStore"; // 導入 authStore 以獲取當前用戶ID
 import LoadingSpinner from "../components/LoadingSpinner.vue";
-import InviteMemberModal from "../components/InviteMemberModal.vue"; // 即將創建
-import GroupTransactionForm from "../components/GroupTransactionForm.vue"; // 即將創建
-import ConfirmationModal from "../components/ConfirmationModal.vue"; // 引入確認模態框
+import InviteMemberModal from "../components/InviteMemberModal.vue";
+import GroupTransactionForm from "../components/GroupTransactionForm.vue";
+import ConfirmationModal from "../components/ConfirmationModal.vue";
 
-const route = useRoute(); // 獲取路由實例
+const route = useRoute();
 const groupStore = useGroupStore();
-const groupTransactionStore = useGroupTransactionStore(); // 實例化
-const categoryStore = useCategoryStore(); // 實例化
+const groupTransactionStore = useGroupTransactionStore();
+const categoryStore = useCategoryStore();
+const authStore = useAuthStore(); // 實例化 authStore
 
-const currentGroupId = ref(null); // 當前群組的ID
+const currentGroupId = ref(null);
 
 // 模態框狀態
 const showInviteMemberModal = ref(false);
 const showGroupTransactionModal = ref(false);
-const currentGroupTransaction = ref(null); // 用於編輯群組交易
+const currentGroupTransaction = ref(null);
 
-// 確認刪除模態框狀態
+// 確認刪除群組交易模態框狀態
 const showConfirmDeleteGroupTransactionModal = ref(false);
 const groupTransactionToDeleteId = ref(null);
+
+// 新增：刪除群組模態框狀態
+const showConfirmDeleteGroupModal = ref(false);
+
+// 新增：移除成員模態框狀態
+const showConfirmRemoveMemberModal = ref(false);
+const memberToRemoveId = ref(null);
+const memberToRemoveUsername = ref("");
 
 // 群組交易篩選狀態
 const groupFilters = reactive({
@@ -521,7 +570,6 @@ const groupFilters = reactive({
   search_term: "",
 });
 
-// applyGroupFilters 函數現在只會在點擊「搜尋」按鈕時調用
 const applyGroupFilters = () => {
   console.log("Applying group filters (manually triggered)");
   groupTransactionStore.fetchGroupTransactions(
@@ -543,13 +591,11 @@ onMounted(async () => {
   await Promise.all([
     groupStore.fetchGroupDetails(currentGroupId.value),
     groupTransactionStore.fetchGroupSummary(currentGroupId.value),
-    // 初始載入群組交易，這裡也調用 applyGroupFilters
-    // 這將確保在組件載入時就執行一次初始搜尋
-    // groupTransactionStore.fetchGroupTransactions(currentGroupId.value, groupFilters, 1)
+    categoryStore.fetchCategories(), // 載入類別
   ]);
-  await categoryStore.fetchCategories();
   applyGroupFilters(); // 載入時應用初始篩選 (即無篩選)
 });
+
 // 重置篩選條件
 const resetGroupFilters = () => {
   groupFilters.type = "";
@@ -631,5 +677,44 @@ const handleDeleteGroupTransactionConfirmed = async () => {
 const handleDeleteGroupTransactionCanceled = () => {
   showConfirmDeleteGroupTransactionModal.value = false;
   groupTransactionToDeleteId.value = null;
+};
+
+// 新增：刪除群組確認模態框操作
+const confirmDeleteGroup = () => {
+  showConfirmDeleteGroupModal.value = true;
+};
+
+const handleDeleteGroupConfirmed = async () => {
+  showConfirmDeleteGroupModal.value = false;
+  if (currentGroupId.value) {
+    await groupStore.deleteGroup(currentGroupId.value); // 這個 action 會處理重定向和通知
+  }
+};
+const handleDeleteGroupCanceled = () => {
+  showConfirmDeleteGroupModal.value = false;
+};
+
+// 新增：移除成員確認模態框操作
+const confirmRemoveMember = (memberId, username) => {
+  memberToRemoveId.value = memberId;
+  memberToRemoveUsername.value = username;
+  showConfirmRemoveMemberModal.value = true;
+};
+
+const handleRemoveMemberConfirmed = async () => {
+  showConfirmRemoveMemberModal.value = false;
+  if (memberToRemoveId.value && currentGroupId.value) {
+    await groupStore.removeMember(currentGroupId.value, memberToRemoveId.value);
+    // groupStore.removeMember 內部已經更新了 currentGroup.members
+    // 如果需要，可以在這裡再調用 groupStore.fetchGroupDetails(currentGroupId.value) 確保數據最新
+    memberToRemoveId.value = null;
+    memberToRemoveUsername.value = "";
+  }
+};
+
+const handleRemoveMemberCanceled = () => {
+  showConfirmRemoveMemberModal.value = false;
+  memberToRemoveId.value = null;
+  memberToRemoveUsername.value = "";
 };
 </script>
