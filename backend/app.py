@@ -282,6 +282,8 @@ with app.app_context():
 # --- 認證相關 API ---
 
 # ...existing code...
+# app.py
+
 @app.route('/api/register', methods=['POST'])
 def register():
     data = request.get_json()
@@ -300,28 +302,28 @@ def register():
     try:
         db.session.commit() # 提交用戶，以便獲取 new_user.id
 
-        # 為新用戶添加預設類別
+        # 為新用戶添加預設類別 (這部分保留，因為個人記帳也需要類別)
         add_default_categories_for_user(new_user.id)
 
-        # 新增：為新用戶創建一個預設的個人群組
-        default_group_name = f"{new_user.username} 的個人群組" # 或者你可以設定一個通用名稱
-        personal_group = Group(name=default_group_name, created_by_user_id=new_user.id)
-        db.session.add(personal_group)
-        db.session.flush() # flush 以獲取 personal_group 的 ID
+        # ====== 開始刪除或註釋以下程式碼塊：自動創建個人群組 ======
+        # default_group_name = f"{new_user.username} 的個人群組"
+        # personal_group = Group(name=default_group_name, created_by_user_id=new_user.id)
+        # db.session.add(personal_group)
+        # db.session.flush()
 
-        # 將新用戶設為該群組的管理員
-        personal_group_member = GroupMember(
-            group_id=personal_group.id,
-            user_id=new_user.id,
-            role='admin',
-            status='accepted'
-        )
-        db.session.add(personal_group_member)
-        db.session.commit() # 提交群組和成員
+        # personal_group_member = GroupMember(
+        #     group_id=personal_group.id,
+        #     user_id=new_user.id,
+        #     role='admin',
+        #     status='accepted'
+        # )
+        # db.session.add(personal_group_member)
+        # db.session.commit() # 提交群組和成員
+        # ====== 結束刪除或註釋程式碼塊 ======
 
         # 刷新 new_user 對象，確保其 group_memberships 關係被加載
-        # 這樣 to_dict() 才能正確地包含群組資訊
-        db.session.refresh(new_user)
+        # 即使沒有群組，這行也應該保留，因為它會載入其他關係
+        db.session.refresh(new_user) 
         # 或者更保險的方式是重新查詢帶有 eager loading 的用戶
         # new_user = User.query.options(joinedload(User.group_memberships).joinedload(GroupMember.group)).get(new_user.id)
 
@@ -329,11 +331,11 @@ def register():
         return jsonify({
             "message": "User registered and logged in successfully",
             "access_token": access_token,
-            "user": new_user.to_dict() # 現在應該包含 default_group_id 和 groups
+            "user": new_user.to_dict() # 現在 to_dict() 可能會返回空群組列表
         }), 201
     except Exception as e:
         db.session.rollback()
-        print("Registration failed:", e)  # 這行會印出詳細錯誤到 log
+        print("Registration failed:", e)
         return jsonify({"error": "Registration failed: " + str(e)}), 500
 
 # server/app.py 中的 add_default_categories_for_user 函數

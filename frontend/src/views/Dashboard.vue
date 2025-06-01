@@ -552,14 +552,13 @@ import { ref, onMounted, reactive, watch } from "vue";
 import { useAuthStore } from "../stores/authStore";
 import { useSummaryStore } from "../stores/summaryStore";
 import LoadingSpinner from "../components/LoadingSpinner.vue";
-// import router from '../router'; // 如果你不再需要強制重定向，可以移除此導入
+// import router from '../router'; // 如果不需要重定向，可以移除此導入
 
 const authStore = useAuthStore();
 const summaryStore = useSummaryStore();
 
-// 新增一個響應式變數來儲存當前選中的群組ID
-// 如果為 null，表示顯示個人數據；如果為數字，表示顯示該群組數據。
-const selectedGroupId = ref(null); // 預設為 null (個人模式)
+// 核心修正：selectedGroupId 始終預設為 null，表示個人模式
+const selectedGroupId = ref(null);
 
 const chartFilters = reactive({
   interval: "month",
@@ -576,11 +575,12 @@ async function loadDashboardData() {
       selectedGroupId.value ? "Group" : "Personal"
     }`
   );
-  console.log(`Current Group ID: ${selectedGroupId.value}`);
+  console.log(`Current Group ID: ${selectedGroupId.value}`); // 如果是 null，會顯示 'Current Group ID: null'
   console.log("Filters:", chartFilters);
 
-  // 將 selectedGroupId 傳遞給 summaryStore 的 loadAllDashboardData
+  // 將 selectedGroupId (可能是 null) 傳遞給 summaryStore 的 loadAllDashboardData
   try {
+    // 這裡不再檢查 currentGroupId 是否存在，因為 selectedGroupId 為 null 時表示個人數據
     await summaryStore.loadAllDashboardData(
       selectedGroupId.value,
       chartFilters
@@ -588,48 +588,26 @@ async function loadDashboardData() {
     console.log("Dashboard data loaded.");
   } catch (err) {
     console.error("Load all dashboard data error:", err);
-    // 這裡可以根據需要顯示錯誤訊息給用戶，但不再強制重定向
+    // 這裡可以根據需要顯示錯誤訊息給用戶
   }
 }
 
-// 當用戶登入後，或者頁面刷新時，判斷是否需要載入個人數據。
-// 如果用戶有預設群組，可以考慮將其設置為 selectedGroupId 的預設值
-// (如果你的業務邏輯是預設展示用戶的第一個群組數據，而非個人數據)
 onMounted(async () => {
   console.log("Dashboard onMounted: Component mounted.");
   await authStore.initializeAuth(); // 確保 authStore.user 被載入
-
-  // 在這裡可以根據 authStore.user 的群組資訊，決定 selectedGroupId 的初始值
-  // 例如：
-  // if (authStore.user && authStore.user.default_group_id) {
-  //   selectedGroupId.value = authStore.user.default_group_id;
-  // }
+  // selectedGroupId 預設為 null，所以 loadDashboardData 會調用個人 API
 });
 
-// 使用 watch 來監聽 authStore.user 的變化
+// 監聽 authStore.user 的變化，確保數據在用戶資訊載入後才開始載入
 watch(
   () => authStore.user,
   (newUser) => {
     if (newUser && !isInitialDataLoaded) {
       console.log("authStore.user detected, loading dashboard data...");
 
-      // 如果用戶有預設群組，可以考慮將其設置為 selectedGroupId 的初始值
-      // 這樣在某些情況下可以預設顯示其第一個群組的數據
-      if (newUser.default_group_id) {
-        selectedGroupId.value = newUser.default_group_id;
-        console.log(
-          `Setting default selected group ID: ${selectedGroupId.value}`
-        );
-      } else if (newUser.groups && newUser.groups.length > 0) {
-        selectedGroupId.value = newUser.groups[0].id;
-        console.log(
-          `Setting default selected group ID from groups list: ${selectedGroupId.value}`
-        );
-      } else {
-        // 如果用戶沒有任何群組，selectedGroupId 保持為 null，表示個人模式
-        selectedGroupId.value = null;
-        console.log("No default group found, displaying personal data.");
-      }
+      // === 關鍵修正：這裡不再基於 newUser.default_group_id 或 groups 設置 selectedGroupId ===
+      // 保持 selectedGroupId 初始值為 null，以確保預設顯示個人數據。
+      // 如果用戶希望查看群組數據，他們需要手動通過 UI 選擇群組。
 
       loadDashboardData(); // 觸發數據載入
       isInitialDataLoaded = true;
@@ -643,15 +621,55 @@ const resetChartFilters = () => {
   chartFilters.end_date = "";
 };
 
-// 你可能需要在模板中添加一個群組選擇器，並在選擇後更新 selectedGroupId.value
-// 例如：
-// <template>
-//   <select v-model="selectedGroupId" @change="loadDashboardData">
-//     <option :value="null">個人記帳</option>
-//     <option v-for="group in authStore.user?.groups" :key="group.id" :value="group.id">
-//       {{ group.name }}
-//     </option>
-//   </select>
-//   <!-- ... 你的儀表板內容 ... -->
-// </template>
+// 你需要在模板中添加一個群組選擇器，讓用戶手動切換到群組模式
+/*
+<template>
+  <div>
+    <h2>儀表板</h2>
+    <div class="mode-selector">
+      <button @click="selectedGroupId = null; loadDashboardData();" 
+              :class="{ 'active': selectedGroupId === null }">個人記帳</button>
+      <select v-model="selectedGroupId" @change="loadDashboardData" v-if="authStore.user && authStore.user.groups && authStore.user.groups.length > 0">
+        <option disabled value="">選擇群組記帳</option>
+        <option v-for="group in authStore.user.groups" :key="group.id" :value="group.id">
+          {{ group.name }}
+        </option>
+      </select>
+      <span v-else>您沒有任何群組，請創建或加入群組。</span>
+    </div>
+    
+    <LoadingSpinner v-if="summaryStore.isLoading" />
+    <div v-else-if="summaryStore.fetchError">
+      <p class="error-message">錯誤: {{ summaryStore.fetchError }}</p>
+      <p v-if="selectedGroupId !== null && authStore.user && authStore.user.groups && authStore.user.groups.length === 0">
+        您尚未加入任何群組。請前往群組管理頁面創建或加入群組。
+      </p>
+    </div>
+    <div v-else-if="summaryStore.isDataReady">
+      <h3>總覽</h3>
+      <p>總收入: {{ summaryStore.totalIncome }}</p>
+      <p>總支出: {{ summaryStore.totalExpense }}</p>
+      <p>餘額: {{ summaryStore.balance }}</p>
+
+      <h3>類別細分 (支出)</h3>
+      <ul>
+        <li v-for="item in summaryStore.categoryBreakdown" :key="item.category_name">
+          {{ item.category_name }}: {{ item.total_amount }}
+        </li>
+      </ul>
+
+      <h3>類別細分 (收入)</h3>
+      <ul>
+        <li v-for="item in summaryStore.incomeCategoryBreakdown" :key="item.category_name">
+          {{ item.category_name }}: {{ item.total_amount }}
+        </li>
+      </ul>
+
+      <h3>趨勢圖</h3>
+      <p>趨勢數據：{{ summaryStore.trendData.length }} 條</p>
+      <pre>{{ JSON.stringify(summaryStore.trendData, null, 2) }}</pre>
+    </div>
+  </div>
+</template>
+*/
 </script>
