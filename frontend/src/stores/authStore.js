@@ -119,20 +119,36 @@ export const useAuthStore = defineStore("auth", {
         const response = await axios.get(`${API_BASE_URL}/user`, {
           headers: this.getAuthHeaders(),
         });
-        this.user = response.data; // 這裡的 response.data 必須包含群組 ID
+        this.user = response.data;
         localStorage.setItem("user", JSON.stringify(this.user));
         return true;
       } catch (err) {
-        if (err.response && err.response.status === 401) {
+        // 全局攔截器現在會處理 401 Unauthorized 錯誤，並觸發登出
+        // 所以在這裡，我們只需要處理非 401 的錯誤，或者在 401 時清除本地狀態即可
+        if (err.response && err.response.status !== 401) {
+          console.error("Failed to fetch current user (non-401 error):", err);
+          this.error = err.response?.data?.error || "獲取用戶信息失敗。";
+          // 可以選擇是否顯示通知：useNotificationStore().showNotification(this.error, "error");
+        } else if (err.response && err.response.status === 401) {
+          // 如果是 401，攔截器已經處理了重定向和通知。
+          // 這裡只需要確保本地狀態被清除。
           console.warn(
-            "Backend session expired or unauthorized. Clearing local auth state."
+            "Fetch current user received 401. Interceptor handled logout/redirect."
           );
         } else {
-          console.error("Failed to fetch current user:", err);
+          // 網路錯誤或其他未知錯誤
+          console.error(
+            "Failed to fetch current user (network or other error):",
+            err
+          );
+          this.error = "無法連接到伺服器或發生未知錯誤。";
         }
-        this.user = null; // 獲取失敗則清除用戶資料
+
+        // 無論何種錯誤，都清除本地存儲的用戶信息，確保會話失效
+        this.user = null;
         localStorage.removeItem("user");
         localStorage.removeItem("access_token");
+        // 不需要在此處再次重定向，因為攔截器已經處理了
         return false;
       } finally {
         this.isLoading = false;
