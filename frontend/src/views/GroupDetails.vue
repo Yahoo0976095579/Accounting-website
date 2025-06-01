@@ -635,53 +635,42 @@ const memberToRemoveUsername = ref("");
 const showConfirmLeaveGroupModal = ref(false);
 
 const groupFilters = reactive({
-  type: "", // 'income', 'expense', or ''
+  type: "",
   category_id: "",
   start_date: "",
   end_date: "",
   search_term: "",
 });
 
-// === 新增：計算屬性 filteredCategories ===
 const filteredCategories = computed(() => {
-  const selectedType = groupFilters.type;
-  if (!selectedType) {
-    // 如果沒有選擇交易類型，顯示所有類別
-    return categoryStore.categories;
-  } else {
-    // 否則，只顯示與所選類型匹配的類別
-    return categoryStore.categories.filter(
-      (category) => category.type === selectedType
-    );
+  if (!categoryStore.categories || !["income", "expense"].includes(form.type)) {
+    return [];
   }
+  return categoryStore.categories.filter((cat) => cat.type === form.type);
 });
 
-// === 新增：監聽 groupFilters.type 的變化，並重置 category_id ===
 watch(
   () => groupFilters.type,
   (newType, oldType) => {
-    // 只有當類型從有值變為無值，或從無值變為有值時，才重置 category_id
-    // 避免在類型篩選變更時， category_id 仍然指向一個不合法的類別
     if (newType !== oldType) {
-      // 檢查當前選擇的 category_id 是否在新的 filteredCategories 中
-      // 如果不在，則重置
       const currentCategoryId = groupFilters.category_id;
       if (currentCategoryId) {
         const categoryExistsInNewFilter = filteredCategories.value.some(
           (cat) => cat.id === currentCategoryId
         );
         if (!categoryExistsInNewFilter) {
-          groupFilters.category_id = ""; // 重置類別選擇
+          groupFilters.category_id = "";
         }
       }
-      // 不自動觸發 applyGroupFilters，讓用戶手動點擊「搜尋」
-      // applyGroupFilters(); // 如果希望自動搜尋，可以取消註釋這行
     }
   }
 );
 
 const applyGroupFilters = () => {
-  console.log("Applying group filters (manually triggered)");
+  console.log(
+    "DEBUG: applyGroupFilters 函數被調用。當前篩選器值:",
+    JSON.parse(JSON.stringify(groupFilters))
+  ); // 記錄篩選器值
   groupTransactionStore.fetchGroupTransactions(
     currentGroupId.value,
     groupFilters,
@@ -691,23 +680,32 @@ const applyGroupFilters = () => {
 };
 
 onMounted(async () => {
+  console.log("DEBUG: GroupDetails.vue: onMounted 觸發。"); // 記錄組件掛載
   currentGroupId.value = parseInt(route.params.id);
   if (isNaN(currentGroupId.value)) {
-    console.error("無效的群組ID");
+    console.error("DEBUG: 無效的群組ID，重定向。"); // 記錄無效ID
     router.push("/groups");
     return;
   }
+  console.log("DEBUG: 獲取群組ID:", currentGroupId.value); // 記錄獲取到的群組ID
 
   const detailsFetched = await groupStore.fetchGroupDetails(
     currentGroupId.value
   );
+  console.log("DEBUG: groupStore.fetchGroupDetails 返回:", detailsFetched); // 記錄群組詳情獲取結果
 
   if (detailsFetched) {
+    console.log("DEBUG: 開始並行獲取群組摘要和類別。"); // 記錄並行獲取開始
     await Promise.all([
       groupTransactionStore.fetchGroupSummary(currentGroupId.value),
       categoryStore.fetchCategories(),
     ]);
-    applyGroupFilters();
+    console.log("DEBUG: 群組摘要和類別獲取完成。"); // 記錄並行獲取完成
+    applyGroupFilters(); // 調用篩選函數
+  } else {
+    console.log(
+      "DEBUG: groupStore.fetchGroupDetails 失敗，不觸發 applyGroupFilters。"
+    ); // 記錄失敗情況
   }
 });
 

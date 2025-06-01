@@ -23,18 +23,16 @@ export const useGroupTransactionStore = defineStore("groupTransaction", {
 
     async fetchGroupTransactions(
       groupId,
-      filters = {}, // 接收外部傳入的篩選器
+      filters = {},
       page = 1,
       per_page = 10
     ) {
       this.groupTransactionsLoading = true;
       this.groupTransactionError = null;
+      console.log("DEBUG: fetchGroupTransactions action 開始。"); // 動作開始
       try {
-        // === 修正點：明確地清理篩選參數 ===
         const cleanedFilters = {};
         for (const key in filters) {
-          // 檢查值是否為空字串、null 或 undefined
-          // 對於數字型 ID，0 可能是有效值，所以不應該過濾 0
           if (
             filters[key] !== "" &&
             filters[key] !== null &&
@@ -43,15 +41,17 @@ export const useGroupTransactionStore = defineStore("groupTransaction", {
             cleanedFilters[key] = filters[key];
           }
         }
-        // ===============================================
 
         const params = {
           page,
           per_page,
-          ...cleanedFilters, // 將清理後的篩選器作為參數
+          ...cleanedFilters,
         };
 
-        console.log("Fetching group transactions with params:", params); // 打印發送的參數
+        console.log(
+          "DEBUG: fetchGroupTransactions: 調用 API，發送的參數:",
+          JSON.parse(JSON.stringify(params))
+        ); // 記錄發送參數
 
         const response = await axios.get(
           `${API_BASE_URL}/groups/${groupId}/transactions`,
@@ -64,9 +64,16 @@ export const useGroupTransactionStore = defineStore("groupTransaction", {
         this.totalGroupTransactions = response.data.total;
         this.totalGroupPages = response.data.pages;
         this.currentGroupPage = response.data.page;
-        this.currentGroupFilters = filters; // 仍然將原始的 filters 儲存到 state 中，用於 UI 顯示
+        this.currentGroupFilters = filters;
 
-        console.log("Fetched group transactions:", response.data.transactions); // 打印獲取的數據
+        console.log(
+          "DEBUG: fetchGroupTransactions: API 調用成功。獲取到的交易記錄:",
+          response.data.transactions
+        ); // 記錄成功獲取到的數據
+        console.log(
+          "DEBUG: 當前 groupTransactions 狀態:",
+          this.groupTransactions
+        ); // 再次確認 Pinia store 狀態
       } catch (err) {
         this.groupTransactionError =
           err.response?.data?.error || "Failed to fetch group transactions.";
@@ -74,9 +81,10 @@ export const useGroupTransactionStore = defineStore("groupTransaction", {
           this.groupTransactionError,
           "error"
         );
-        console.error("Fetch group transactions error:", err);
+        console.error("DEBUG: fetchGroupTransactions: API 調用錯誤:", err); // 記錄錯誤詳情
       } finally {
         this.groupTransactionsLoading = false;
+        console.log("DEBUG: fetchGroupTransactions action 完成。"); // 動作完成
       }
     },
 
