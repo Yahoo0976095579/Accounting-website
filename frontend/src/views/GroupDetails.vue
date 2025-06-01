@@ -503,7 +503,7 @@
       <ConfirmationModal
         v-if="showConfirmDeleteGroupModal"
         title="刪除群組確認"
-        message="您確定要永久刪除此群組嗎？<br>此操作無法撤銷，且群組內所有數據將被刪除。"
+        message="'您確定要永久刪除此群組嗎？<br>此操作無法撤銷，且群組內所有數據將被刪除。'"
         confirmText="確認刪除群組"
         confirmButtonClass="bg-red-600 hover:bg-red-800 text-white"
         @confirm="handleDeleteGroupConfirmed"
