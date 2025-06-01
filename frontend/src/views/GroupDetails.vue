@@ -1,23 +1,21 @@
 <!-- client/src/views/GroupDetails.vue -->
 <template>
   <div class="container mx-auto p-4 sm:p-6 lg:p-8">
-    <!-- 頂部導航/操作區塊 -->
-    <div
-      class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6"
-    >
+    <!-- 頂部操作區塊 -->
+    <div class="flex flex-row items-center justify-between mb-6 space-x-2">
       <!-- 返回我的群組按鈕 -->
       <button
         @click="$router.back()"
-        class="mb-3 sm:mb-0 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded transition duration-200 ease-in-out text-sm sm:text-base w-full sm:w-auto"
+        class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded transition duration-200 ease-in-out text-sm sm:text-base flex-grow sm:flex-grow-0"
       >
         ← 返回我的群組
       </button>
 
-      <!-- 刪除群組按鈕 (手機版在右上角) -->
+      <!-- 刪除群組按鈕 -->
       <button
         v-if="groupStore.currentGroup?.your_role === 'admin'"
         @click="confirmDeleteGroup"
-        class="bg-red-600 hover:bg-red-800 text-white font-bold py-2 px-4 rounded text-sm sm:text-base transition duration-200 ease-in-out w-full sm:w-auto"
+        class="bg-red-600 hover:bg-red-800 text-white font-bold py-2 px-4 rounded text-sm sm:text-base transition duration-200 ease-in-out flex-grow sm:flex-grow-0"
       >
         刪除群組
       </button>
@@ -49,9 +47,7 @@
     </div>
     <div v-else-if="groupStore.currentGroup">
       <!-- 群組概覽卡片 (收入/支出/結餘) -->
-      <!-- 手機版：收入、支出左右並排，結餘在下方，佔滿寬度 -->
       <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-6 mb-8">
-        <!-- 收入卡片 -->
         <div class="bg-white p-4 rounded-lg shadow-md text-center col-span-1">
           <h2 class="text-base sm:text-lg font-semibold mb-1 text-gray-700">
             群組總收入
@@ -60,7 +56,6 @@
             ${{ groupTransactionStore.groupSummary.total_income.toFixed(2) }}
           </p>
         </div>
-        <!-- 支出卡片 -->
         <div class="bg-white p-4 rounded-lg shadow-md text-center col-span-1">
           <h2 class="text-base sm:text-lg font-semibold mb-1 text-gray-700">
             群組總支出
@@ -69,7 +64,6 @@
             ${{ groupTransactionStore.groupSummary.total_expense.toFixed(2) }}
           </p>
         </div>
-        <!-- 結餘卡片 (手機版佔滿兩欄，大螢幕正常) -->
         <div
           class="bg-white p-4 rounded-lg shadow-md text-center col-span-2 sm:col-span-1"
         >
@@ -190,9 +184,9 @@
         </div>
 
         <!-- 篩選器與搜索 -->
-        <!-- 手機版：所有篩選器獨立一行，"搜尋" 和 "重置" 左右並排 -->
+        <!-- 手機版：使用 grid-cols-2 讓篩選器並排 -->
         <div
-          class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-6"
+          class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-6"
         >
           <!-- 交易類型 -->
           <div>
@@ -275,7 +269,8 @@
             />
           </div>
           <!-- 搜索 -->
-          <div>
+          <div class="col-span-2 md:col-span-1">
+            <!-- 讓搜索框在手機上獨佔兩欄，大螢幕正常 -->
             <label
               for="groupSearchTerm"
               class="block text-gray-700 text-sm font-bold mb-2"
