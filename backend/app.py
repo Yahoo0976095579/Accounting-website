@@ -325,7 +325,7 @@ def register():
         # 或者更保險的方式是重新查詢帶有 eager loading 的用戶
         # new_user = User.query.options(joinedload(User.group_memberships).joinedload(GroupMember.group)).get(new_user.id)
 
-        access_token = create_access_token(identity=new_user.id)
+        access_token = create_access_token(identity=str(new_user.id))
         return jsonify({
             "message": "User registered and logged in successfully",
             "access_token": access_token,
@@ -368,7 +368,7 @@ def login():
     ).first() # 使用 joinedload 確保關係被載入
 
     if user and user.check_password(password):
-        access_token = create_access_token(identity=user.id)
+        access_token = create_access_token(identity=str(user.id))
         return jsonify({
             "message": "Logged in successfully",
             "access_token": access_token,
