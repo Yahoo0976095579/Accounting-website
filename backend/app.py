@@ -1157,6 +1157,7 @@ def delete_transaction(transaction_id):
 @app.route('/api/summary', methods=['GET'])
 @jwt_required()
 def get_summary():
+    _ = request.args.get('interval')  # 忽略 interval 參數
     user_id = get_jwt_identity()
     total_income = db.session.query(func.sum(Transaction.amount)).filter_by(user_id=user_id, type='income').scalar() or 0
     total_expense = db.session.query(func.sum(Transaction.amount)).filter_by(user_id=user_id, type='expense').scalar() or 0
@@ -1170,6 +1171,7 @@ def get_summary():
 @app.route('/api/summary/category_breakdown', methods=['GET'])
 @jwt_required()
 def get_category_breakdown():
+    _ = request.args.get('interval')  # 忽略 interval 參數
     transaction_type = request.args.get('type') # 'income' or 'expense'
     start_date_str = request.args.get('start_date')
     end_date_str = request.args.get('end_date')
