@@ -43,35 +43,22 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(512), nullable=False)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-    is_active = db.Column(db.Boolean, nullable=False, default=True) # <-- 確保這行存在並設置為 True
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
 
-    # 與 Transaction 和 Category 的關係 (保持不變)
     categories = db.relationship('Category', backref='user', lazy=True)
     transactions = db.relationship('Transaction', backref='user', lazy=True)
 
-    # <-- 新增或確保以下群組相關的關係定義
-    # Group.created_by_user_id (創建的群組)
     created_groups = db.relationship('Group', foreign_keys='Group.created_by_user_id', backref='creator', lazy=True)
-    # GroupMember (所屬的群組成員身份)
     group_memberships = db.relationship('GroupMember', backref='member_user', lazy=True)
-    # Invitation (發送的邀請)
     sent_invitations = db.relationship('Invitation', foreign_keys='Invitation.invited_by_user_id', backref='sender', lazy=True)
-    # Invitation (收到的邀請)
     received_invitations = db.relationship('Invitation', foreign_keys='Invitation.invited_user_id', backref='receiver', lazy=True)
-    # GroupTransaction (在群組中記錄的交易)
     recorded_group_transactions = db.relationship('GroupTransaction', foreign_keys='GroupTransaction.created_by_user_id', backref='creator', lazy=True)
-    # --> 結束新增或確認
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
-
-    # UserMixin 默認需要這些屬性
-    # @property
-    # def is_active(self):
-    #     return True # 已經通過 is_active 欄位處理，所以這個屬性方法可以移除或確保其簡單返回 True
 
     @property
     def is_authenticated(self):
@@ -84,34 +71,59 @@ class User(UserMixin, db.Model):
     def get_id(self):
         return str(self.id)
 
+    # === 正確修正：User 的 to_dict() 應該包含群組資訊 ===
     def to_dict(self):
+        # 獲取使用者所有已接受的群組成員身份
+        # 注意：為了避免在獲取 user 時立即觸發大量資料庫查詢 (lazy=True)，
+        # 你可能需要在此處或在調用 to_dict() 之前預先載入 (eager load) group_memberships
+        # 例如：User.query.options(db.joinedload(User.group_memberships).joinedload(GroupMember.group)).get(user_id)
+        # 不過，對於一個簡單的 to_dict，直接遍歷關係通常是可行的。
+        accepted_memberships = [
+            m for m in self.group_memberships if m.status == 'accepted'
+        ]
+        
+        groups_data = []
+        default_group_id = None 
+
+        if accepted_memberships:
+            # 這裡簡單地取第一個已接受的群組作為 "預設" 範例。
+            # 你可以根據業務邏輯調整選擇預設群組的方式。
+            first_group_membership = accepted_memberships[0]
+            default_group_id = first_group_membership.group_id
+
+            for membership in accepted_memberships:
+                group = membership.group
+                if group: # 確保群組存在
+                    groups_data.append({
+                        'id': group.id,
+                        'name': group.name,
+                        'description': group.description,
+                        'your_role': membership.role # 包含使用者在該群組的角色
+                    })
+
         return {
             'id': self.id,
             'username': self.username,
             'created_at': self.created_at.isoformat(),
-            'is_active': self.is_active # 確保這裡也包含
+            'is_active': self.is_active,
+            'default_group_id': default_group_id, # 新增：預設群組 ID
+            'groups': groups_data # 新增：使用者所屬的群組列表
         }
 
-# server/app.py (在 Category 模型內部)
-# server/app.py (在 Category 模型內部)
+
 class Category(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     type = db.Column(db.String(10), nullable=False) # 'income' or 'expense'
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
-    # === 正確的雙向關係定義 ===
-    # 這裡定義 Category 到 Transaction 的一對多關係
-    # Transaction 模型中的 'category_rel' 將會是這個關係的反向
     transactions = db.relationship('Transaction', back_populates='category_obj', lazy=True)
-
-    # <-- 新增這行：與 GroupTransaction 的關係
     group_transactions_with_category = db.relationship('GroupTransaction', backref='category', lazy=True)
-    # --> 結束新增
 
     def __repr__(self):
         return f"Category('{self.name}', '{self.type}', User_id: {self.user_id})"
 
+    # === 修正：Category 的 to_dict() 應該只返回類別資訊 ===
     def to_dict(self):
         return {
             'id': self.id,
@@ -125,14 +137,11 @@ class Transaction(db.Model):
     amount = db.Column(db.Float, nullable=False)
     type = db.Column(db.String(10), nullable=False) # 'income' or 'expense'
     description = db.Column(db.String(255), nullable=True)
-    date = db.Column(db.Date, nullable=False) # 交易日期
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow) # 記錄創建時間
+    date = db.Column(db.Date, nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     category_id = db.Column(db.Integer, db.ForeignKey('category.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False) # 外鍵，歸屬於特定使用者
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
-    # === 正確的雙向關係定義 ===
-    # 這裡定義 Transaction 到 Category 的多對一關係
-    # 'category_obj' 是指 Category 模型中關係的反向屬性名稱 (back_populates='transactions')
     category_obj = db.relationship('Category', back_populates='transactions', lazy=True)
 
     def __repr__(self):
@@ -147,10 +156,9 @@ class Transaction(db.Model):
             'date': self.date.isoformat() if self.date else None,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'category_id': self.category_id,
-            'category_name': self.category_obj.name if self.category_obj else None, # 使用新的屬性名稱
+            'category_name': self.category_obj.name if self.category_obj else None,
             'user_id': self.user_id
         }
-
 # --- 新增資料庫模型定義 (群組相關) ---
 
 class Group(db.Model):
