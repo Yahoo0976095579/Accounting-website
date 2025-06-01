@@ -118,58 +118,82 @@
 
       <!-- filepath: c:\Users\yahoo\OneDrive\Desktop\python程式設計\記帳網站\frontend\src\views\Dashboard.vue -->
       <div
-        class="mb-8 p-6 bg-white rounded-2xl shadow flex flex-col gap-4 border border-blue-100 sm:flex-row sm:items-center sm:gap-6"
+        class="mb-8 p-4 sm:p-6 bg-white rounded-lg shadow-md border border-blue-100"
       >
-        <h3 class="text-lg font-semibold text-gray-700 mr-2 min-w-[90px]">
-          數據篩選:
+        <h3 class="text-xl sm:text-2xl font-bold text-gray-700 mb-4">
+          數據篩選
         </h3>
-        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
-          <label for="trendInterval" class="text-gray-700 text-sm font-bold"
-            >區間:</label
-          >
-          <select
-            id="trendInterval"
-            v-model="chartFilters.interval"
-            class="shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm min-w-[90px]"
-          >
-            <option value="day">按日</option>
-            <option value="week">按週</option>
-            <option value="month">按月</option>
-          </select>
-        </div>
-        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
-          <label for="chartStartDate" class="text-gray-700 text-sm font-bold"
-            >從:</label
-          >
-          <input
-            type="date"
-            id="chartStartDate"
-            v-model="chartFilters.start_date"
-            class="shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm min-w-[120px]"
-          />
-          <label for="chartEndDate" class="text-gray-700 text-sm font-bold"
-            >到:</label
-          >
-          <input
-            type="date"
-            id="chartEndDate"
-            v-model="chartFilters.end_date"
-            class="shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm min-w-[120px]"
-          />
-        </div>
-        <div class="flex flex-row gap-2 mt-2 sm:mt-0">
-          <button
-            @click="loadDashboardData"
-            class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm"
-          >
-            搜尋
-          </button>
-          <button
-            @click="resetChartFilters"
-            class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm"
-          >
-            重置
-          </button>
+
+        <!-- 篩選器輸入組 -->
+        <!-- 使用 grid 佈局，手機上至少兩列，中等螢幕三列，大螢幕更多 -->
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
+          <!-- 區間篩選 -->
+          <div>
+            <label
+              for="trendInterval"
+              class="block text-gray-700 text-sm font-bold mb-2"
+            >
+              區間:
+            </label>
+            <select
+              id="trendInterval"
+              v-model="chartFilters.interval"
+              class="w-full shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
+            >
+              <option value="day">按日</option>
+              <option value="week">按週</option>
+              <option value="month">按月</option>
+            </select>
+          </div>
+
+          <!-- 從日期 -->
+          <div>
+            <label
+              for="chartStartDate"
+              class="block text-gray-700 text-sm font-bold mb-2"
+            >
+              從日期:
+            </label>
+            <input
+              type="date"
+              id="chartStartDate"
+              v-model="chartFilters.start_date"
+              class="w-full shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
+            />
+          </div>
+
+          <!-- 到日期 -->
+          <div>
+            <label
+              for="chartEndDate"
+              class="block text-gray-700 text-sm font-bold mb-2"
+            >
+              到日期:
+            </label>
+            <input
+              type="date"
+              id="chartEndDate"
+              v-model="chartFilters.end_date"
+              class="w-full shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
+            />
+          </div>
+
+          <!-- 搜尋/重置按鈕 -->
+          <!-- 讓按鈕組佔據底部所有可用空間，並左右均分 -->
+          <div class="col-span-full flex flex-row gap-2 pt-2">
+            <button
+              @click="loadDashboardData"
+              class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm transition duration-200 ease-in-out flex-1"
+            >
+              搜尋
+            </button>
+            <button
+              @click="resetChartFilters"
+              class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm transition duration-200 ease-in-out flex-1"
+            >
+              重置
+            </button>
+          </div>
         </div>
       </div>
       <!-- 過濾器區塊
