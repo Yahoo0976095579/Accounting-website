@@ -2,6 +2,21 @@ import { defineStore } from "pinia";
 import axios from "axios";
 import { API_BASE_URL } from "./config";
 
+// 工具函數：過濾掉空字串、undefined、null 的參數
+function cleanFilters(filters) {
+  const cleaned = {};
+  for (const key in filters) {
+    if (
+      filters[key] !== "" &&
+      filters[key] !== undefined &&
+      filters[key] !== null
+    ) {
+      cleaned[key] = filters[key];
+    }
+  }
+  return cleaned;
+}
+
 export const useSummaryStore = defineStore("summary", {
   state: () => ({
     totalIncome: 0,
@@ -64,7 +79,7 @@ export const useSummaryStore = defineStore("summary", {
       try {
         const response = await axios.get(
           `${API_BASE_URL}/summary/category_breakdown`,
-          { params: filters, headers: this.getAuthHeaders() }
+          { params: cleanFilters(filters), headers: this.getAuthHeaders() }
         );
         this.categoryBreakdown = response.data;
       } catch (err) {
@@ -75,7 +90,7 @@ export const useSummaryStore = defineStore("summary", {
     async fetchTrendDataInternal(filters) {
       try {
         const response = await axios.get(`${API_BASE_URL}/summary/trend`, {
-          params: filters,
+          params: cleanFilters(filters),
           headers: this.getAuthHeaders(),
         });
         this.trendData = response.data;
@@ -89,7 +104,7 @@ export const useSummaryStore = defineStore("summary", {
         const response = await axios.get(
           `${API_BASE_URL}/summary/category_breakdown`,
           {
-            params: { ...filters, type: "income" },
+            params: cleanFilters({ ...filters, type: "income" }),
             headers: this.getAuthHeaders(),
           }
         );
