@@ -1173,32 +1173,35 @@ def get_summary():
 def get_category_breakdown():
     _ = request.args.get('interval')  # 忽略 interval 參數
     transaction_type = request.args.get('type') # 'income' or 'expense'
-    start_date_str = request.args.get('start_date')
-    end_date_str = request.args.get('end_date')
+    # 這裡先把空字串轉成 None
+    start_date_str = request.args.get('start_date') or None
+    end_date_str = request.args.get('end_date') or None
+    if start_date_str is not None and start_date_str.strip() == "":
+        start_date_str = None
+    if end_date_str is not None and end_date_str.strip() == "":
+        end_date_str = None
 
     query = db.session.query(
         Category.name,
         Category.type,
         func.sum(Transaction.amount)
-    ).join(Transaction).filter(
+    ).join(Transaction, Transaction.category_id == Category.id).filter(
         Transaction.user_id == get_jwt_identity(),
-        Category.user_id == get_jwt_identity() # 確保類別也歸屬於當前使用者
+        Category.user_id == get_jwt_identity()
     )
 
     if transaction_type in ['income', 'expense']:
         query = query.filter(Transaction.type == transaction_type)
-    if start_date_str:
+    if start_date_str is not None:
         try:
-            if start_date_str.strip() != "":
-                start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
-                query = query.filter(Transaction.date >= start_date)
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            query = query.filter(Transaction.date >= start_date)
         except ValueError:
             return jsonify({"error": "Invalid start_date format. Use YYYY-MM-DD."}), 400
-    if end_date_str:
+    if end_date_str is not None:
         try:
-            if end_date_str.strip() != "":
-                end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
-                query = query.filter(Transaction.date <= end_date)
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            query = query.filter(Transaction.date <= end_date)
         except ValueError:
             return jsonify({"error": "Invalid end_date format. Use YYYY-MM-DD."}), 400
 
@@ -1220,23 +1223,25 @@ def get_category_breakdown():
 @jwt_required()
 def get_trend_data():
     interval = request.args.get('interval', 'month')
-    start_date_str = request.args.get('start_date')
-    end_date_str = request.args.get('end_date')
+    start_date_str = request.args.get('start_date') or None
+    end_date_str = request.args.get('end_date') or None
+    if start_date_str is not None and start_date_str.strip() == "":
+        start_date_str = None
+    if end_date_str is not None and end_date_str.strip() == "":
+        end_date_str = None
 
     query = Transaction.query.filter_by(user_id=get_jwt_identity())
 
-    if start_date_str:
+    if start_date_str is not None:
         try:
-            if start_date_str.strip() != "":
-                start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
-                query = query.filter(Transaction.date >= start_date)
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            query = query.filter(Transaction.date >= start_date)
         except ValueError:
             return jsonify({"error": "Invalid start_date format. Use YYYY-MM-DD."}), 400
-    if end_date_str:
+    if end_date_str is not None:
         try:
-            if end_date_str.strip() != "":
-                end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
-                query = query.filter(Transaction.date <= end_date)
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            query = query.filter(Transaction.date <= end_date)
         except ValueError:
             return jsonify({"error": "Invalid end_date format. Use YYYY-MM-DD."}), 400
 
