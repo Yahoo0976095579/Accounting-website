@@ -312,7 +312,7 @@
           <!-- 新增一個 flex 容器來控制這個按鈕的對齊 -->
           <button
             @click="openAddGroupTransactionModal"
-            class="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-base transition duration-200 ease-in-out md:w-auto md:max-w-[160px]"
+            class="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-base transition duration-200 ease-in-out md:w-auto md:max-w-[160px] justify-center"
           >
             新增群組交易
           </button>
