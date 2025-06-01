@@ -1,7 +1,7 @@
 Flask
 Flask-Cors
 Flask-SQLAlchemy
-Flask-Login
+Flask-JWT-Extended
 python-dotenv
 Werkzeug
 gunicorn
