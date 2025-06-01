@@ -567,13 +567,27 @@ def invite_member(group_id):
     if invited_user.id == get_jwt_identity():
         return jsonify({"error": "不能邀請自己"}), 400
 
-    # 檢查是否已經是成員
-    if GroupMember.query.filter_by(group_id=group_id, user_id=invited_user.id, status='accepted').first():
-        return jsonify({"error": "該使用者已是群組成員"}), 409
+    # === 修正點：更全面的檢查 ===
 
-    # 檢查是否已有待處理邀請
-    if Invitation.query.filter_by(group_id=group_id, invited_user_id=invited_user.id, status='pending').first():
-        return jsonify({"error": "已存在對該使用者的待處理邀請"}), 409
+    # 1. 檢查是否已經是群組的活躍成員
+    existing_group_member = GroupMember.query.filter_by(group_id=group_id, user_id=invited_user.id, status='accepted').first()
+    if existing_group_member:
+        return jsonify({"error": "該使用者已是群組的活躍成員"}), 409
+
+    # 2. 檢查是否已有任何狀態的邀請記錄（包括 pending, accepted, rejected）
+    # 因為 UniqueConstraint 是針對 (group_id, invited_user_id) 的，所以只要有任何一條就不能再創建
+    existing_invitation = Invitation.query.filter_by(group_id=group_id, invited_user_id=invited_user.id).first()
+    if existing_invitation:
+        if existing_invitation.status == 'pending':
+            return jsonify({"error": "已存在對該使用者的待處理邀請"}), 409
+        elif existing_invitation.status == 'accepted':
+            # 理論上這個應該被上面的 GroupMember 檢查捕獲，但以防萬一
+            return jsonify({"error": "該使用者已接受過此群組邀請"}), 409
+        elif existing_invitation.status == 'rejected':
+            return jsonify({"error": "該使用者已拒絕過此群組邀請"}), 409
+        # 如果未來有其他狀態，可以繼續添加判斷
+
+    # === 結束修正點 ===
 
     new_invitation = Invitation(
         group_id=group_id,
@@ -587,6 +601,10 @@ def invite_member(group_id):
         return jsonify({"message": f"已成功向 {invited_username} 發送邀請"}), 201
     except Exception as e:
         db.session.rollback()
+        # 捕捉 UniqueViolation 錯誤並返回自定義訊息
+        if "duplicate key value violates unique constraint" in str(e):
+             return jsonify({"error": "邀請失敗：該使用者已在群組中或已有邀請記錄。"}), 409
+        print(f"發送邀請失敗: {e}")
         return jsonify({"error": "發送邀請失敗: " + str(e)}), 500
 
 @app.route('/api/invitations', methods=['GET'])
