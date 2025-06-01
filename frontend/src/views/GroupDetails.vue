@@ -308,11 +308,11 @@
         <!-- 新增群組交易按鈕 - 優化點 -->
         <!-- 這個按鈕在手機上佔滿寬度，但在 PC 畫面時，寬度適中。 -->
         <!-- 為了讓它在大螢幕上與篩選器組對齊，我們將它放在一個新的 flex 容器中 -->
-        <div class="flex justify-end mb-6">
+        <div class="flex justify-center mb-6">
           <!-- 新增一個 flex 容器來控制這個按鈕的對齊 -->
           <button
             @click="openAddGroupTransactionModal"
-            class="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-base transition duration-200 ease-in-out md:w-auto md:max-w-[160px] justify-center"
+            class="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-base transition duration-200 ease-in-out md:w-auto md:max-w-[160px]"
           >
             新增群組交易
           </button>
