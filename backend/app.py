@@ -883,7 +883,7 @@ def get_group_trend_data(group_id):
     start_date_str = request.args.get('start_date')
     end_date_str = request.args.get('end_date')
 
-    query = GroupTransaction.query.filter_by(group_id=group_id) # <-- 關鍵：按 group_id 篩選
+    query = GroupTransaction.query.filter_by(group_id=group_id)
 
     if start_date_str:
         try:
@@ -898,14 +898,17 @@ def get_group_trend_data(group_id):
         except ValueError:
             return jsonify({"error": "Invalid end_date format. Use YYYY-MM-DD."}), 400
 
+    # === 修正點：將 func.strftime 改為 func.to_char 並調整格式字串 ===
     if interval == 'day':
-        group_by_col = func.strftime('%Y-%m-%d', GroupTransaction.date)
+        group_by_col = func.to_char(GroupTransaction.date, 'YYYY-MM-DD')
     elif interval == 'week':
-        group_by_col = func.strftime('%Y-%W', GroupTransaction.date)
+        # PostgreSQL 的 ISO 週格式為 IYYY-IW
+        group_by_col = func.to_char(GroupTransaction.date, 'IYYY-IW')
     elif interval == 'month':
-        group_by_col = func.strftime('%Y-%m', GroupTransaction.date)
+        group_by_col = func.to_char(GroupTransaction.date, 'YYYY-MM')
     else:
         return jsonify({"error": "Invalid interval. Must be 'day', 'week', or 'month'."}), 400
+    # ================================================================
 
     income_data = query.with_entities(
         group_by_col.label('period'),
@@ -1275,15 +1278,16 @@ def get_trend_data():
         except ValueError:
             return jsonify({"error": "Invalid end_date format. Use YYYY-MM-DD."}), 400
 
-    # 根據 interval 進行分組
+    # === 修正點：將 func.strftime 改為 func.to_char 並調整格式字串 ===
     if interval == 'day':
         group_by_col = func.to_char(Transaction.date, 'YYYY-MM-DD')
     elif interval == 'week':
-        group_by_col = func.to_char(Transaction.date, 'IYYY-IW')  # ISO週
+        group_by_col = func.to_char(Transaction.date, 'IYYY-IW') # PostgreSQL 的 ISO 週格式
     elif interval == 'month':
         group_by_col = func.to_char(Transaction.date, 'YYYY-MM')
     else:
         return jsonify({"error": "Invalid interval. Must be 'day', 'week', or 'month'."}), 400
+    # ================================================================
 
     income_data = query.with_entities(
         group_by_col.label('period'),
@@ -1310,7 +1314,6 @@ def get_trend_data():
         })
 
     return jsonify(trend_data)
-
 # --- 使用者設定 API ---
 
 @app.route('/api/user/username', methods=['PUT'])
