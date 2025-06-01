@@ -3,6 +3,7 @@
 一個功能豐富、支援個人與群組的記帳 Web 應用程式，幫助使用者輕鬆追蹤與分析收支。具備多條件篩選、分頁、類別管理、群組協作、即時通知、響應式設計與現代化 UI/UX。
 
 測試使用 Vue + python flask + sqlite 完成
+
 部屬使用 Vercel 部屬前端，後端用 Render，資料庫用 Render 內的 postgresql
 
 網站網址為:https://accounting-website-j8a3.vercel.app/
