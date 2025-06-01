@@ -23,18 +23,36 @@ export const useGroupTransactionStore = defineStore("groupTransaction", {
 
     async fetchGroupTransactions(
       groupId,
-      filters = {},
+      filters = {}, // 接收外部傳入的篩選器
       page = 1,
       per_page = 10
     ) {
       this.groupTransactionsLoading = true;
       this.groupTransactionError = null;
       try {
+        // === 修正點：明確地清理篩選參數 ===
+        const cleanedFilters = {};
+        for (const key in filters) {
+          // 檢查值是否為空字串、null 或 undefined
+          // 對於數字型 ID，0 可能是有效值，所以不應該過濾 0
+          if (
+            filters[key] !== "" &&
+            filters[key] !== null &&
+            filters[key] !== undefined
+          ) {
+            cleanedFilters[key] = filters[key];
+          }
+        }
+        // ===============================================
+
         const params = {
           page,
           per_page,
-          ...filters,
+          ...cleanedFilters, // 將清理後的篩選器作為參數
         };
+
+        console.log("Fetching group transactions with params:", params); // 打印發送的參數
+
         const response = await axios.get(
           `${API_BASE_URL}/groups/${groupId}/transactions`,
           {
@@ -46,7 +64,9 @@ export const useGroupTransactionStore = defineStore("groupTransaction", {
         this.totalGroupTransactions = response.data.total;
         this.totalGroupPages = response.data.pages;
         this.currentGroupPage = response.data.page;
-        this.currentGroupFilters = filters;
+        this.currentGroupFilters = filters; // 仍然將原始的 filters 儲存到 state 中，用於 UI 顯示
+
+        console.log("Fetched group transactions:", response.data.transactions); // 打印獲取的數據
       } catch (err) {
         this.groupTransactionError =
           err.response?.data?.error || "Failed to fetch group transactions.";
