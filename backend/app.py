@@ -9,6 +9,7 @@ import os
 from dotenv import load_dotenv
 import re
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+from sqlalchemy.orm import joinedload # <-- 在這裡新增這行！
 
 # 載入 .env 檔案中的環境變數
 load_dotenv()
@@ -73,11 +74,6 @@ class User(UserMixin, db.Model):
 
     # === 正確修正：User 的 to_dict() 應該包含群組資訊 ===
     def to_dict(self):
-        # 獲取使用者所有已接受的群組成員身份
-        # 注意：為了避免在獲取 user 時立即觸發大量資料庫查詢 (lazy=True)，
-        # 你可能需要在此處或在調用 to_dict() 之前預先載入 (eager load) group_memberships
-        # 例如：User.query.options(db.joinedload(User.group_memberships).joinedload(GroupMember.group)).get(user_id)
-        # 不過，對於一個簡單的 to_dict，直接遍歷關係通常是可行的。
         accepted_memberships = [
             m for m in self.group_memberships if m.status == 'accepted'
         ]
@@ -86,19 +82,17 @@ class User(UserMixin, db.Model):
         default_group_id = None 
 
         if accepted_memberships:
-            # 這裡簡單地取第一個已接受的群組作為 "預設" 範例。
-            # 你可以根據業務邏輯調整選擇預設群組的方式。
             first_group_membership = accepted_memberships[0]
             default_group_id = first_group_membership.group_id
 
             for membership in accepted_memberships:
                 group = membership.group
-                if group: # 確保群組存在
+                if group:
                     groups_data.append({
                         'id': group.id,
                         'name': group.name,
                         'description': group.description,
-                        'your_role': membership.role # 包含使用者在該群組的角色
+                        'your_role': membership.role
                     })
 
         return {
@@ -106,8 +100,8 @@ class User(UserMixin, db.Model):
             'username': self.username,
             'created_at': self.created_at.isoformat(),
             'is_active': self.is_active,
-            'default_group_id': default_group_id, # 新增：預設群組 ID
-            'groups': groups_data # 新增：使用者所屬的群組列表
+            'default_group_id': default_group_id,
+            'groups': groups_data
         }
 
 
@@ -304,22 +298,43 @@ def register():
     new_user.set_password(password)
     db.session.add(new_user)
     try:
-        db.session.commit()
+        db.session.commit() # 提交用戶，以便獲取 new_user.id
 
-        # 也可以在這裡為新使用者添加預設類別
+        # 為新用戶添加預設類別
         add_default_categories_for_user(new_user.id)
-        # 新增這一行：註冊後直接產生 JWT token
+
+        # 新增：為新用戶創建一個預設的個人群組
+        default_group_name = f"{new_user.username} 的個人群組" # 或者你可以設定一個通用名稱
+        personal_group = Group(name=default_group_name, created_by_user_id=new_user.id)
+        db.session.add(personal_group)
+        db.session.flush() # flush 以獲取 personal_group 的 ID
+
+        # 將新用戶設為該群組的管理員
+        personal_group_member = GroupMember(
+            group_id=personal_group.id,
+            user_id=new_user.id,
+            role='admin',
+            status='accepted'
+        )
+        db.session.add(personal_group_member)
+        db.session.commit() # 提交群組和成員
+
+        # 刷新 new_user 對象，確保其 group_memberships 關係被加載
+        # 這樣 to_dict() 才能正確地包含群組資訊
+        db.session.refresh(new_user)
+        # 或者更保險的方式是重新查詢帶有 eager loading 的用戶
+        # new_user = User.query.options(joinedload(User.group_memberships).joinedload(GroupMember.group)).get(new_user.id)
+
         access_token = create_access_token(identity=new_user.id)
         return jsonify({
             "message": "User registered and logged in successfully",
             "access_token": access_token,
-            "user": new_user.to_dict()
+            "user": new_user.to_dict() # 現在應該包含 default_group_id 和 groups
         }), 201
     except Exception as e:
         db.session.rollback()
         print("Registration failed:", e)  # 這行會印出詳細錯誤到 log
         return jsonify({"error": "Registration failed: " + str(e)}), 500
-# ...existing code...
 
 # server/app.py 中的 add_default_categories_for_user 函數
 def add_default_categories_for_user(user_id):
@@ -348,14 +363,16 @@ def login():
     username = data.get('username')
     password = data.get('password')
 
-    user = User.query.filter_by(username=username).first()
+    user = User.query.filter_by(username=username).options(
+        joinedload(User.group_memberships).joinedload(GroupMember.group)
+    ).first() # 使用 joinedload 確保關係被載入
 
     if user and user.check_password(password):
         access_token = create_access_token(identity=user.id)
         return jsonify({
             "message": "Logged in successfully",
             "access_token": access_token,
-            "user": user.to_dict()
+            "user": user.to_dict() # 現在 to_dict() 應該會包含群組資訊
         }), 200
     else:
         return jsonify({"error": "名稱或密碼錯誤"}), 401
@@ -367,7 +384,10 @@ def logout():
 @app.route('/api/user', methods=['GET'])
 @jwt_required()
 def get_current_user():
-    user = User.query.get(get_jwt_identity())
+    user = User.query.options(
+        joinedload(User.group_memberships).joinedload(GroupMember.group)
+    ).get(get_jwt_identity()) # 使用 joinedload 確保關係被載入
+
     if not user:
         return jsonify({"error": "User not found"}), 404
     return jsonify(user.to_dict()), 200
