@@ -133,8 +133,8 @@
             class="shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm min-w-[90px]"
           >
             <option value="day">按日</option>
+            <option value="week">按週</option>
             <option value="month">按月</option>
-            <option value="year">按年</option>
           </select>
         </div>
         <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
