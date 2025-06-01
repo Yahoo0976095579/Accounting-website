@@ -628,50 +628,12 @@ const memberToRemoveUsername = ref("");
 const showConfirmLeaveGroupModal = ref(false);
 
 const groupFilters = reactive({
-  type: "", // 'income', 'expense', or ''
+  type: "",
   category_id: "",
   start_date: "",
   end_date: "",
   search_term: "",
 });
-
-// === 新增：計算屬性 filteredCategories ===
-const filteredCategories = computed(() => {
-  const selectedType = groupFilters.type;
-  if (!selectedType) {
-    // 如果沒有選擇交易類型，顯示所有類別
-    return categoryStore.categories;
-  } else {
-    // 否則，只顯示與所選類型匹配的類別
-    return categoryStore.categories.filter(
-      (category) => category.type === selectedType
-    );
-  }
-});
-
-// === 新增：監聽 groupFilters.type 的變化，並重置 category_id ===
-watch(
-  () => groupFilters.type,
-  (newType, oldType) => {
-    // 只有當類型從有值變為無值，或從無值變為有值時，才重置 category_id
-    // 避免在類型篩選變更時， category_id 仍然指向一個不合法的類別
-    if (newType !== oldType) {
-      // 檢查當前選擇的 category_id 是否在新的 filteredCategories 中
-      // 如果不在，則重置
-      const currentCategoryId = groupFilters.category_id;
-      if (currentCategoryId) {
-        const categoryExistsInNewFilter = filteredCategories.value.some(
-          (cat) => cat.id === currentCategoryId
-        );
-        if (!categoryExistsInNewFilter) {
-          groupFilters.category_id = ""; // 重置類別選擇
-        }
-      }
-      // 不自動觸發 applyGroupFilters，讓用戶手動點擊「搜尋」
-      // applyGroupFilters(); // 如果希望自動搜尋，可以取消註釋這行
-    }
-  }
-);
 
 const applyGroupFilters = () => {
   console.log("Applying group filters (manually triggered)");
