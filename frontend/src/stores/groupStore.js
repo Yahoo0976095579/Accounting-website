@@ -248,5 +248,59 @@ export const useGroupStore = defineStore("group", {
         this.isLoading = false;
       }
     },
+    // 新增：更新成員角色
+    async updateMemberRole(groupId, memberId, newRole) {
+      this.isLoading = true; // 可能需要更細粒度的 loading
+      this.error = null;
+      const notificationStore = useNotificationStore();
+      try {
+        const response = await axios.put(
+          `${API_BASE_URL}/groups/${groupId}/members/${memberId}/role`,
+          { role: newRole },
+          { headers: this.getAuthHeaders() }
+        );
+        notificationStore.showNotification(response.data.message, "success");
+        await this.fetchGroupDetails(groupId); // 刷新群組詳情以更新成員列表和角色
+        return { success: true };
+      } catch (err) {
+        const errorMessage = err.response?.data?.error || "更新成員角色失敗。";
+        notificationStore.showNotification(errorMessage, "error");
+        this.error = null;
+        console.error("Update member role error:", err);
+        return { success: false, error: errorMessage };
+      } finally {
+        this.isLoading = false;
+      }
+    },
+
+    // 新增：退出群組
+    async leaveGroup(groupId) {
+      this.isLoading = true;
+      this.error = null;
+      const notificationStore = useNotificationStore();
+      try {
+        const response = await axios.post(
+          `${API_BASE_URL}/groups/${groupId}/leave`,
+          {},
+          {
+            headers: this.getAuthHeaders(),
+          }
+        );
+        notificationStore.showNotification(response.data.message, "success");
+        // 退出群組後，需要刷新用戶的群組列表並重定向到群組總覽頁
+        await this.fetchUserGroups(); // 刷新我所屬的群組列表
+        this.currentGroup = null; // 清除當前群組詳情
+        router.push("/groups"); // 重定向到群組列表頁面
+        return { success: true };
+      } catch (err) {
+        const errorMessage = err.response?.data?.error || "退出群組失敗。";
+        notificationStore.showNotification(errorMessage, "error");
+        this.error = null;
+        console.error("Leave group error:", err);
+        return { success: false, error: errorMessage };
+      } finally {
+        this.isLoading = false;
+      }
+    },
   },
 });

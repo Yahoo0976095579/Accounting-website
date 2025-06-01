@@ -96,6 +96,13 @@
           >
             邀請成員
           </button>
+          <!-- 新增：退出群組按鈕 -->
+          <button
+            @click="confirmLeaveGroup"
+            class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+          >
+            退出群組
+          </button>
         </div>
         <div
           v-if="groupStore.currentGroup?.members.length === 0"
@@ -109,21 +116,46 @@
             :key="member.id"
             class="py-2 flex justify-between items-center"
           >
-            <span class="font-semibold">{{ member.username }}</span>
-            <span class="text-sm text-gray-600 capitalize mr-2"
+            <span
+              class="font-semibold"
+              :class="{
+                'text-blue-700': member.user_id === authStore.user?.id,
+              }"
+            >
+              {{ member.username }}
+              <span v-if="member.user_id === authStore.user?.id">(您)</span>
+            </span>
+            <span class="text-sm text-gray-600 capitalize ml-2"
               >({{ member.role }})</span
             >
-            <!-- 移除成員按鈕 (只有管理員能看到，且不能移除自己) -->
-            <button
-              v-if="
-                groupStore.currentGroup?.your_role === 'admin' &&
-                member.user_id !== authStore.user?.id
-              "
-              @click="confirmRemoveMember(member.user_id, member.username)"
-              class="text-red-600 hover:text-red-900 text-sm ml-auto"
-            >
-              移除
-            </button>
+            <div class="flex items-center ml-auto space-x-2">
+              <!-- 管理員操作按鈕 -->
+              <template v-if="groupStore.currentGroup?.your_role === 'admin'">
+                <!-- 賦予/撤銷管理員權限 -->
+                <button
+                  v-if="member.user_id !== authStore.user?.id"
+                  @click="toggleMemberRole(member)"
+                  :class="{
+                    'bg-indigo-500 hover:bg-indigo-700':
+                      member.role === 'member',
+                    'bg-yellow-500 hover:bg-yellow-700':
+                      member.role === 'admin',
+                  }"
+                  class="text-white font-bold py-1 px-3 rounded text-sm transition"
+                >
+                  {{ member.role === "member" ? "設為管理員" : "撤銷管理員" }}
+                </button>
+
+                <!-- 移除成員按鈕 (不能移除自己) -->
+                <button
+                  v-if="member.user_id !== authStore.user?.id"
+                  @click="confirmRemoveMember(member.user_id, member.username)"
+                  class="text-red-600 hover:text-red-900 text-sm"
+                >
+                  移除
+                </button>
+              </template>
+            </div>
           </li>
         </ul>
       </div>
@@ -520,6 +552,16 @@
         @confirm="handleRemoveMemberConfirmed"
         @cancel="handleRemoveMemberCanceled"
       />
+      <!-- 新增：確認退出群組模態框 -->
+      <ConfirmationModal
+        v-if="showConfirmLeaveGroupModal"
+        title="退出群組確認"
+        message="您確定要退出此群組嗎？退出後您將無法再查看或記錄此群組的收支。"
+        confirmText="確認退出"
+        confirmButtonClass="bg-red-600 hover:bg-red-800 text-white"
+        @confirm="handleLeaveGroupConfirmed"
+        @cancel="handleLeaveGroupCanceled"
+      />
     </div>
   </div>
 </template>
@@ -530,7 +572,7 @@ import { useRoute } from "vue-router";
 import { useGroupStore } from "../stores/groupStore";
 import { useGroupTransactionStore } from "../stores/groupTransactionStore";
 import { useCategoryStore } from "../stores/categoryStore";
-import { useAuthStore } from "../stores/authStore"; // 導入 authStore 以獲取當前用戶ID
+import { useAuthStore } from "../stores/authStore";
 import LoadingSpinner from "../components/LoadingSpinner.vue";
 import InviteMemberModal from "../components/InviteMemberModal.vue";
 import GroupTransactionForm from "../components/GroupTransactionForm.vue";
@@ -540,7 +582,7 @@ const route = useRoute();
 const groupStore = useGroupStore();
 const groupTransactionStore = useGroupTransactionStore();
 const categoryStore = useCategoryStore();
-const authStore = useAuthStore(); // 實例化 authStore
+const authStore = useAuthStore();
 
 const currentGroupId = ref(null);
 
@@ -549,19 +591,18 @@ const showInviteMemberModal = ref(false);
 const showGroupTransactionModal = ref(false);
 const currentGroupTransaction = ref(null);
 
-// 確認刪除群組交易模態框狀態
 const showConfirmDeleteGroupTransactionModal = ref(false);
 const groupTransactionToDeleteId = ref(null);
 
-// 新增：刪除群組模態框狀態
 const showConfirmDeleteGroupModal = ref(false);
 
-// 新增：移除成員模態框狀態
 const showConfirmRemoveMemberModal = ref(false);
 const memberToRemoveId = ref(null);
 const memberToRemoveUsername = ref("");
 
-// 群組交易篩選狀態
+// 新增：退出群組模態框狀態
+const showConfirmLeaveGroupModal = ref(false);
+
 const groupFilters = reactive({
   type: "",
   category_id: "",
@@ -584,41 +625,30 @@ onMounted(async () => {
   currentGroupId.value = parseInt(route.params.id);
   if (isNaN(currentGroupId.value)) {
     console.error("無效的群組ID");
-    // 如果是無效 ID，直接導向群組列表
     router.push("/groups");
     return;
   }
-  // fetchGroupDetails 返回 false 時會觸發重定向，並設置 groupStore.error
+
   const detailsFetched = await groupStore.fetchGroupDetails(
     currentGroupId.value
   );
 
   if (detailsFetched) {
-    // 只有在成功獲取群組詳情後才載入其他數據
     await Promise.all([
       groupTransactionStore.fetchGroupSummary(currentGroupId.value),
       categoryStore.fetchCategories(),
     ]);
     applyGroupFilters();
   }
-
-  // 同時獲取群組詳情、群組摘要和群組交易
-  await Promise.all([
-    groupStore.fetchGroupDetails(currentGroupId.value),
-    groupTransactionStore.fetchGroupSummary(currentGroupId.value),
-    categoryStore.fetchCategories(), // 載入類別
-  ]);
-  applyGroupFilters(); // 載入時應用初始篩選 (即無篩選)
 });
 
-// 重置篩選條件
 const resetGroupFilters = () => {
   groupFilters.type = "";
   groupFilters.category_id = "";
   groupFilters.start_date = "";
   groupFilters.end_date = "";
   groupFilters.search_term = "";
-  applyGroupFilters(); // 重置後自動應用篩選
+  applyGroupFilters();
 };
 
 const changeGroupPage = (newPage) => {
@@ -631,7 +661,7 @@ const changeGroupPage = (newPage) => {
   }
 };
 
-// 邀請成員模態框操作
+// 邀請成員模態框操作 (不變)
 const openInviteMemberModal = () => {
   showInviteMemberModal.value = true;
 };
@@ -639,11 +669,11 @@ const closeInviteMemberModal = () => {
   showInviteMemberModal.value = false;
 };
 const handleMemberInvited = async () => {
-  await groupStore.fetchGroupDetails(currentGroupId.value); // 邀請後刷新成員列表
+  await groupStore.fetchGroupDetails(currentGroupId.value);
   closeInviteMemberModal();
 };
 
-// 群組交易模態框操作
+// 群組交易模態框操作 (不變)
 const openAddGroupTransactionModal = () => {
   currentGroupTransaction.value = null;
   showGroupTransactionModal.value = true;
@@ -657,7 +687,6 @@ const closeGroupTransactionModal = () => {
   currentGroupTransaction.value = null;
 };
 const handleGroupTransactionSaved = async () => {
-  // 保存後刷新交易列表和群組摘要
   await groupTransactionStore.fetchGroupTransactions(
     currentGroupId.value,
     groupFilters,
@@ -667,7 +696,7 @@ const handleGroupTransactionSaved = async () => {
   closeGroupTransactionModal();
 };
 
-// 刪除群組交易確認模態框操作
+// 刪除群組交易確認模態框操作 (不變)
 const confirmDeleteGroupTransaction = (id) => {
   groupTransactionToDeleteId.value = id;
   showConfirmDeleteGroupTransactionModal.value = true;
@@ -679,7 +708,6 @@ const handleDeleteGroupTransactionConfirmed = async () => {
       currentGroupId.value,
       groupTransactionToDeleteId.value
     );
-    // 刪除後刷新交易列表和群組摘要
     await groupTransactionStore.fetchGroupTransactions(
       currentGroupId.value,
       groupFilters,
@@ -694,7 +722,7 @@ const handleDeleteGroupTransactionCanceled = () => {
   groupTransactionToDeleteId.value = null;
 };
 
-// 新增：刪除群組確認模態框操作
+// 刪除群組確認模態框操作 (不變)
 const confirmDeleteGroup = () => {
   showConfirmDeleteGroupModal.value = true;
 };
@@ -702,14 +730,14 @@ const confirmDeleteGroup = () => {
 const handleDeleteGroupConfirmed = async () => {
   showConfirmDeleteGroupModal.value = false;
   if (currentGroupId.value) {
-    await groupStore.deleteGroup(currentGroupId.value); // 這個 action 會處理重定向和通知
+    await groupStore.deleteGroup(currentGroupId.value);
   }
 };
 const handleDeleteGroupCanceled = () => {
   showConfirmDeleteGroupModal.value = false;
 };
 
-// 新增：移除成員確認模態框操作
+// 移除成員確認模態框操作 (不變)
 const confirmRemoveMember = (memberId, username) => {
   memberToRemoveId.value = memberId;
   memberToRemoveUsername.value = username;
@@ -720,16 +748,40 @@ const handleRemoveMemberConfirmed = async () => {
   showConfirmRemoveMemberModal.value = false;
   if (memberToRemoveId.value && currentGroupId.value) {
     await groupStore.removeMember(currentGroupId.value, memberToRemoveId.value);
-    // groupStore.removeMember 內部已經更新了 currentGroup.members
-    // 如果需要，可以在這裡再調用 groupStore.fetchGroupDetails(currentGroupId.value) 確保數據最新
     memberToRemoveId.value = null;
     memberToRemoveUsername.value = "";
   }
 };
-
 const handleRemoveMemberCanceled = () => {
   showConfirmRemoveMemberModal.value = false;
   memberToRemoveId.value = null;
   memberToRemoveUsername.value = "";
+};
+
+// 新增：切換成員角色
+const toggleMemberRole = async (member) => {
+  const newRole = member.role === "member" ? "admin" : "member";
+  await groupStore.updateMemberRole(
+    currentGroupId.value,
+    member.user_id,
+    newRole
+  );
+  // groupStore.updateMemberRole 內部會調用 fetchGroupDetails 刷新成員列表
+};
+
+// 新增：退出群組模態框操作
+const confirmLeaveGroup = () => {
+  showConfirmLeaveGroupModal.value = true;
+};
+
+const handleLeaveGroupConfirmed = async () => {
+  showConfirmLeaveGroupModal.value = false;
+  if (currentGroupId.value) {
+    await groupStore.leaveGroup(currentGroupId.value); // groupStore.leaveGroup 會處理重定向和通知
+  }
+};
+
+const handleLeaveGroupCanceled = () => {
+  showConfirmLeaveGroupModal.value = false;
 };
 </script>

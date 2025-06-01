@@ -527,23 +527,100 @@ def delete_group(group_id):
 @app.route('/api/groups/<int:group_id>/leave', methods=['POST'])
 @jwt_required()
 def leave_group(group_id):
+    current_user_id = get_jwt_identity()
     # 查找使用者在該群組的成員身份
-    group_member = GroupMember.query.filter_by(group_id=group_id, user_id=get_jwt_identity(), status='accepted').first()
+    group_member = GroupMember.query.filter_by(group_id=group_id, user_id=current_user_id, status='accepted').first()
     if not group_member:
         return jsonify({"error": "您不是該群組成員"}), 404
 
-    # 如果是群組唯一管理員且還有其他成員，不能直接退出
-    if group_member.role == 'admin' and GroupMember.query.filter_by(group_id=group_id, role='admin', status='accepted').count() == 1 and GroupMember.query.filter_by(group_id=group_id, status='accepted').count() > 1:
-        return jsonify({"error": "您是該群組的唯一管理員，請先轉移管理權限或移除其他成員再退出"}), 400
+    # === 修正點：完善唯一管理員退出群組的檢查 ===
+    if group_member.role == 'admin': # 如果要退出的用戶是管理員
+        active_admins_count = GroupMember.query.filter_by(
+            group_id=group_id,
+            role='admin',
+            status='accepted'
+        ).count()
+        
+        # 如果當前用戶是唯一的管理員 (active_admins_count == 1)
+        # 且群組中還有其他非管理員成員存在
+        if active_admins_count == 1 and GroupMember.query.filter_by(group_id=group_id, status='accepted').count() > 1:
+            return jsonify({"error": "您是該群組的唯一管理員，請先將管理權限轉移給其他活躍成員，然後再嘗試退出。"}), 400
+        
+        # 如果是唯一管理員，但群組中沒有其他成員（只有自己），則允許退出
+        # 因為群組會因為沒有成員而自動變成空，且之後可以考慮刪除
+        
+    # === 結束修正點 ===
 
     try:
+        # 在刪除成員身份之前，需要將該成員記錄的所有群組交易關聯設置為 NULL 或其他預設值
+        # 如果 GroupTransaction.created_by_user_id 有外鍵約束 ON DELETE SET NULL 或 ON DELETE CASCADE，則可以省略此處
+        # 如果沒有，當成員退出時，其創建的群組交易的 created_by_user_id 就會變成懸空的外鍵。
+        # 最簡單的方法是，如果一個成員退出，他創建的交易仍然存在，但 "created_by_user_id" 保持不變，
+        # 只是前端在顯示時，如果該用戶已經不是成員，顯示 "已退出成員" 或類似。
+        # 這裡不對 GroupTransaction 進行處理，假設歷史數據可以保留其 created_by_user_id
+
         db.session.delete(group_member)
         db.session.commit()
         return jsonify({"message": "已成功退出群組"}), 200
     except Exception as e:
         db.session.rollback()
+        print(f"Error leaving group {group_id} for user {current_user_id}: {e}")
         return jsonify({"error": "退出群組失敗: " + str(e)}), 500
+@app.route('/api/groups/<int:group_id>/members/<int:member_id>/role', methods=['PUT'])
+@jwt_required()
+def update_group_member_role(group_id, member_id):
+    current_user_id = get_jwt_identity()
+    data = request.get_json()
+    new_role = data.get('role')
 
+    if new_role not in ['admin', 'member']:
+        return jsonify({"error": "無效的角色。角色必須是 'admin' 或 'member'。"}), 400
+
+    # 1. 檢查操作者 (current_user) 是否為該群組的管理員
+    admin_member = GroupMember.query.filter_by(
+        group_id=group_id,
+        user_id=current_user_id,
+        role='admin',
+        status='accepted'
+    ).first()
+    if not admin_member:
+        return jsonify({"error": "群組未找到或您無權修改成員角色"}), 403
+
+    # 2. 獲取要被修改的成員記錄
+    member_to_update = GroupMember.query.filter_by(
+        group_id=group_id,
+        user_id=member_id,
+        status='accepted'
+    ).first()
+    if not member_to_update:
+        return jsonify({"error": "成員未找到或不是該群組的活躍成員"}), 404
+
+    # 3. 不允許修改自己的角色
+    if member_to_update.user_id == current_user_id:
+        return jsonify({"error": "無法透過此介面修改自己的角色。"}), 400
+
+    # 4. 處理管理員降級的情況：不能降級唯一的管理員，如果還有其他活躍成員
+    if member_to_update.role == 'admin' and new_role == 'member': # 如果是從 admin 降級到 member
+        active_admins_count = GroupMember.query.filter_by(
+            group_id=group_id,
+            role='admin',
+            status='accepted'
+        ).count()
+        
+        # 如果當前被降級的是唯一的管理員 (active_admins_count == 1)
+        # 且群組中還有其他非管理員成員 (因為如果只有自己一個管理員，群組可以空或只有自己，那可以降級)
+        if active_admins_count == 1 and GroupMember.query.filter_by(group_id=group_id, status='accepted').count() > 1:
+            return jsonify({"error": "無法將群組的唯一管理員降級，請先指定其他管理員。"}), 400
+
+    # 5. 更新成員角色
+    member_to_update.role = new_role
+    try:
+        db.session.commit()
+        return jsonify({"message": f"成員 {member_to_update.member_user.username} 的角色已更新為 {new_role}"}), 200
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error updating member role: {e}")
+        return jsonify({"error": "更新成員角色失敗: " + str(e)}), 500
 
 # --- 群組邀請 API ---
 
