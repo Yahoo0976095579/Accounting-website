@@ -1,52 +1,32 @@
 <!-- client/src/views/GroupDetails.vue -->
 <template>
   <div class="container mx-auto p-4 sm:p-6 lg:p-8">
-    <!-- 返回按鈕 -->
-    <button
-      @click="$router.back()"
-      class="mb-4 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded transition duration-200 ease-in-out text-sm sm:text-base"
-    >
-      ← 返回我的群組
-    </button>
-
-    <!-- 標題與主要操作按鈕 -->
+    <!-- 頂部導航/操作區塊 -->
     <div
       class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6"
     >
-      <h1 class="text-3xl sm:text-4xl font-bold text-blue-800 mb-3 sm:mb-0">
-        {{ groupStore.currentGroup?.name || "群組詳情" }}
-      </h1>
-      <!-- 主要操作按鈕組：在小螢幕上垂直堆疊，大螢幕上水平排列 -->
-      <div
-        class="flex flex-col sm:flex-row sm:space-x-3 space-y-2 sm:space-y-0 w-full sm:w-auto"
+      <!-- 返回我的群組按鈕 -->
+      <button
+        @click="$router.back()"
+        class="mb-3 sm:mb-0 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded transition duration-200 ease-in-out text-sm sm:text-base w-full sm:w-auto"
       >
-        <!-- 刪除群組按鈕 -->
-        <button
-          v-if="groupStore.currentGroup?.your_role === 'admin'"
-          @click="confirmDeleteGroup"
-          class="bg-red-600 hover:bg-red-800 text-white font-bold py-2 px-4 rounded text-sm sm:text-base transition duration-200 ease-in-out w-full sm:w-auto"
-        >
-          刪除群組
-        </button>
-        <!-- 邀請成員按鈕 -->
-        <button
-          v-if="groupStore.currentGroup?.your_role === 'admin'"
-          @click="openInviteMemberModal"
-          class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded text-sm sm:text-base transition duration-200 ease-in-out w-full sm:w-auto"
-        >
-          邀請成員
-        </button>
-        <!-- 退出群組按鈕 -->
-        <button
-          @click="confirmLeaveGroup"
-          class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded text-sm sm:text-base transition duration-200 ease-in-out w-full sm:w-auto"
-        >
-          退出群組
-        </button>
-      </div>
+        ← 返回我的群組
+      </button>
+
+      <!-- 刪除群組按鈕 (手機版在右上角) -->
+      <button
+        v-if="groupStore.currentGroup?.your_role === 'admin'"
+        @click="confirmDeleteGroup"
+        class="bg-red-600 hover:bg-red-800 text-white font-bold py-2 px-4 rounded text-sm sm:text-base transition duration-200 ease-in-out w-full sm:w-auto"
+      >
+        刪除群組
+      </button>
     </div>
 
-    <!-- 群組描述 -->
+    <!-- 主標題與描述 -->
+    <h1 class="text-3xl sm:text-4xl font-bold text-blue-800 mb-3">
+      {{ groupStore.currentGroup?.name || "群組詳情" }}
+    </h1>
     <p class="text-gray-600 mb-8 text-base sm:text-lg">
       {{ groupStore.currentGroup?.description || "無描述" }}
     </p>
@@ -69,25 +49,30 @@
     </div>
     <div v-else-if="groupStore.currentGroup">
       <!-- 群組概覽卡片 (收入/支出/結餘) -->
-      <!-- 調整卡片大小和間距，讓手機版更緊湊 -->
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-6 mb-8">
-        <div class="bg-white p-4 rounded-lg shadow-md text-center">
+      <!-- 手機版：收入、支出左右並排，結餘在下方，佔滿寬度 -->
+      <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-6 mb-8">
+        <!-- 收入卡片 -->
+        <div class="bg-white p-4 rounded-lg shadow-md text-center col-span-1">
           <h2 class="text-base sm:text-lg font-semibold mb-1 text-gray-700">
             群組總收入
           </h2>
-          <p class="text-green-600 text-2xl sm:text-3xl font-bold">
+          <p class="text-green-600 text-xl sm:text-3xl font-bold">
             ${{ groupTransactionStore.groupSummary.total_income.toFixed(2) }}
           </p>
         </div>
-        <div class="bg-white p-4 rounded-lg shadow-md text-center">
+        <!-- 支出卡片 -->
+        <div class="bg-white p-4 rounded-lg shadow-md text-center col-span-1">
           <h2 class="text-base sm:text-lg font-semibold mb-1 text-gray-700">
             群組總支出
           </h2>
-          <p class="text-red-600 text-2xl sm:text-3xl font-bold">
+          <p class="text-red-600 text-xl sm:text-3xl font-bold">
             ${{ groupTransactionStore.groupSummary.total_expense.toFixed(2) }}
           </p>
         </div>
-        <div class="bg-white p-4 rounded-lg shadow-md text-center">
+        <!-- 結餘卡片 (手機版佔滿兩欄，大螢幕正常) -->
+        <div
+          class="bg-white p-4 rounded-lg shadow-md text-center col-span-2 sm:col-span-1"
+        >
           <h2 class="text-base sm:text-lg font-semibold mb-1 text-gray-700">
             群組結餘
           </h2>
@@ -96,7 +81,7 @@
               'text-blue-600': groupTransactionStore.groupSummary.balance >= 0,
               'text-orange-600': groupTransactionStore.groupSummary.balance < 0,
             }"
-            class="text-2xl sm:text-3xl font-bold"
+            class="text-xl sm:text-3xl font-bold"
           >
             ${{ groupTransactionStore.groupSummary.balance.toFixed(2) }}
           </p>
@@ -105,7 +90,29 @@
 
       <!-- 群組成員卡片 -->
       <div class="bg-white p-6 rounded-lg shadow-md mb-8">
-        <h2 class="text-2xl font-bold text-gray-700 mb-4">群組成員</h2>
+        <div
+          class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4"
+        >
+          <h2 class="text-2xl font-bold text-gray-700 mb-3 sm:mb-0">
+            群組成員
+          </h2>
+          <!-- 邀請成員和退出群組按鈕：手機版左右並排 -->
+          <div class="flex flex-row space-x-2 w-full sm:w-auto justify-end">
+            <button
+              v-if="groupStore.currentGroup?.your_role === 'admin'"
+              @click="openInviteMemberModal"
+              class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded text-sm transition duration-200 ease-in-out flex-1 sm:flex-auto"
+            >
+              邀請成員
+            </button>
+            <button
+              @click="confirmLeaveGroup"
+              class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded text-sm transition duration-200 ease-in-out flex-1 sm:flex-auto"
+            >
+              退出群組
+            </button>
+          </div>
+        </div>
         <div
           v-if="groupStore.currentGroup?.members.length === 0"
           class="text-gray-500 py-4 text-center"
@@ -119,7 +126,7 @@
             class="py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between"
           >
             <!-- 成員名稱和角色 -->
-            <div class="flex items-center mb-2 sm:mb-0">
+            <div class="flex items-center mb-2 sm:mb-0 w-full sm:w-auto">
               <span
                 class="font-semibold text-gray-800 text-base sm:text-lg"
                 :class="{
@@ -138,9 +145,9 @@
               >
             </div>
 
-            <!-- 管理員操作按鈕組：在小螢幕上垂直堆疊，大螢幕上水平排列 -->
+            <!-- 管理員操作按鈕組：手機版左右並排，桌面版也左右並排 -->
             <div
-              class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 ml-auto w-full sm:w-auto"
+              class="flex flex-row space-x-2 ml-auto w-full sm:w-auto justify-end"
             >
               <template v-if="groupStore.currentGroup?.your_role === 'admin'">
                 <!-- 賦予/撤銷管理員權限 -->
@@ -153,7 +160,7 @@
                     'bg-yellow-500 hover:bg-yellow-700':
                       member.role === 'admin',
                   }"
-                  class="text-white font-bold py-1 px-3 rounded text-sm transition duration-200 ease-in-out w-full sm:w-auto whitespace-nowrap"
+                  class="text-white font-bold py-1 px-3 rounded text-sm transition duration-200 ease-in-out flex-1 sm:flex-auto whitespace-nowrap"
                 >
                   {{ member.role === "member" ? "設為管理員" : "撤銷管理員" }}
                 </button>
@@ -162,7 +169,7 @@
                 <button
                   v-if="member.user_id !== authStore.user?.id"
                   @click="confirmRemoveMember(member.user_id, member.username)"
-                  class="bg-red-600 hover:bg-red-800 text-white font-bold py-1 px-3 rounded text-sm transition duration-200 ease-in-out w-full sm:w-auto whitespace-nowrap"
+                  class="bg-red-600 hover:bg-red-800 text-white font-bold py-1 px-3 rounded text-sm transition duration-200 ease-in-out flex-1 sm:flex-auto whitespace-nowrap"
                 >
                   移除
                 </button>
@@ -180,19 +187,15 @@
           <h2 class="text-2xl font-bold text-gray-700 mb-3 sm:mb-0">
             群組交易記錄
           </h2>
-          <button
-            @click="openAddGroupTransactionModal"
-            class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-200 ease-in-out w-full sm:w-auto"
-          >
-            新增群組交易
-          </button>
         </div>
 
         <!-- 篩選器與搜索 -->
-        <!-- 使用 flex-wrap 和 col-span 來實現響應式佈局 -->
-        <div class="flex flex-wrap gap-4 mb-6">
+        <!-- 手機版：所有篩選器獨立一行，"搜尋" 和 "重置" 左右並排 -->
+        <div
+          class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-6"
+        >
           <!-- 交易類型 -->
-          <div class="flex-grow sm:flex-grow-0 sm:w-1/2 md:w-auto">
+          <div>
             <label
               for="groupFilterType"
               class="block text-gray-700 text-sm font-bold mb-2"
@@ -209,7 +212,7 @@
             </select>
           </div>
           <!-- 類別 -->
-          <div class="flex-grow sm:flex-grow-0 sm:w-1/2 md:w-auto">
+          <div>
             <label
               for="groupFilterCategory"
               class="block text-gray-700 text-sm font-bold mb-2"
@@ -245,7 +248,7 @@
             </p>
           </div>
           <!-- 日期範圍 -->
-          <div class="flex-grow sm:flex-grow-0 sm:w-1/2 md:w-auto">
+          <div>
             <label
               for="groupStartDate"
               class="block text-gray-700 text-sm font-bold mb-2"
@@ -258,7 +261,7 @@
               class="w-full shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
             />
           </div>
-          <div class="flex-grow sm:flex-grow-0 sm:w-1/2 md:w-auto">
+          <div>
             <label
               for="groupEndDate"
               class="block text-gray-700 text-sm font-bold mb-2"
@@ -272,7 +275,7 @@
             />
           </div>
           <!-- 搜索 -->
-          <div class="flex-grow w-full sm:flex-grow-0 sm:w-auto">
+          <div>
             <label
               for="groupSearchTerm"
               class="block text-gray-700 text-sm font-bold mb-2"
@@ -287,22 +290,32 @@
             />
           </div>
           <!-- 搜尋/重置按鈕 -->
-          <div class="w-full flex gap-2">
+          <div class="col-span-full flex flex-row gap-2 pt-2">
             <button
               @click="applyGroupFilters"
               type="button"
-              class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm transition duration-200 ease-in-out flex-grow"
+              class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm transition duration-200 ease-in-out flex-1"
             >
               搜尋
             </button>
             <button
               @click="resetGroupFilters"
               type="button"
-              class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm transition duration-200 ease-in-out flex-grow"
+              class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm transition duration-200 ease-in-out flex-1"
             >
               重置篩選
             </button>
           </div>
+        </div>
+
+        <!-- 新增群組交易按鈕 (位置調整到篩選器下方) -->
+        <div class="mb-6">
+          <button
+            @click="openAddGroupTransactionModal"
+            class="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-200 ease-in-out text-base"
+          >
+            新增群組交易
+          </button>
         </div>
 
         <!-- 交易列表 -->
@@ -411,7 +424,7 @@
               >
                 上一頁
               </button>
-              <span class="text-gray-700">
+              <span class="text-gray-700 text-sm sm:text-base">
                 第 {{ groupTransactionStore.currentGroupPage }} 頁 / 共
                 {{ groupTransactionStore.totalGroupPages }} 頁 ({{
                   groupTransactionStore.totalGroupTransactions
@@ -504,7 +517,7 @@
               >
                 上一頁
               </button>
-              <span class="text-gray-700">
+              <span class="text-gray-700 text-sm sm:text-base">
                 第 {{ groupTransactionStore.currentGroupPage }} 頁 / 共
                 {{ groupTransactionStore.totalGroupPages }} 頁 ({{
                   groupTransactionStore.totalGroupTransactions
@@ -584,6 +597,7 @@
 </template>
 
 <script setup>
+// ... (script setup 內容與之前相同，不需要修改) ...
 import { ref, onMounted, reactive, watch } from "vue";
 import { useRoute } from "vue-router";
 import { useGroupStore } from "../stores/groupStore";
