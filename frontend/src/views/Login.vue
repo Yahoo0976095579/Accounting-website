@@ -2,7 +2,7 @@
 <template>
   <div class="flex items-center justify-center min-h-screen bg-gray-100">
     <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-      <h1 class="text-2xl font-bold mb-6 text-center">登入11</h1>
+      <h1 class="text-2xl font-bold mb-6 text-center">登入</h1>
       <form @submit.prevent="handleLogin">
         <div class="mb-4">
           <label
