@@ -348,8 +348,12 @@ def logout():
     return jsonify({"message": "Logged out successfully"}), 200
 
 @app.route('/api/user', methods=['GET'])
-@jwt_required() # 只有登入後才能獲取使用者資訊
-
+@jwt_required()
+def get_current_user():
+    user = User.query.get(get_jwt_identity())
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+    return jsonify(user.to_dict()), 200
 # --- 群組管理 API ---
 
 @app.route('/api/groups', methods=['POST'])
