@@ -6,7 +6,7 @@
       <!-- 返回我的群組按鈕 -->
       <button
         @click="$router.back()"
-        class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded transition duration-200 ease-in-out text-sm sm:text-base flex-grow sm:flex-grow-0"
+        class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-2 rounded transition duration-200 ease-in-out text-sm sm:text-base flex-grow sm:flex-grow-0"
       >
         ← 返回我的群組
       </button>
