@@ -277,6 +277,7 @@ with app.app_context():
 
 # --- 認證相關 API ---
 
+# ...existing code...
 @app.route('/api/register', methods=['POST'])
 def register():
     data = request.get_json()
@@ -297,11 +298,18 @@ def register():
 
         # 也可以在這裡為新使用者添加預設類別
         add_default_categories_for_user(new_user.id)
-        return jsonify({"message": "User registered and logged in successfully", "user": new_user.to_dict()}), 201
+        # 新增這一行：註冊後直接產生 JWT token
+        access_token = create_access_token(identity=new_user.id)
+        return jsonify({
+            "message": "User registered and logged in successfully",
+            "access_token": access_token,
+            "user": new_user.to_dict()
+        }), 201
     except Exception as e:
         db.session.rollback()
         print("Registration failed:", e)  # 這行會印出詳細錯誤到 log
         return jsonify({"error": "Registration failed: " + str(e)}), 500
+# ...existing code...
 
 # server/app.py 中的 add_default_categories_for_user 函數
 def add_default_categories_for_user(user_id):
