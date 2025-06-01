@@ -72,18 +72,29 @@ export const useGroupStore = defineStore("group", {
 
     async fetchGroupDetails(groupId) {
       this.isLoading = true;
-      this.error = null;
+      this.error = null; // 清除之前的錯誤
+      console.log(
+        `DEBUG: groupStore.fetchGroupDetails: 開始獲取群組 ${groupId} 的詳情。`
+      ); // 新增日誌
       try {
         const response = await axios.get(`${API_BASE_URL}/groups/${groupId}`, {
           headers: this.getAuthHeaders(),
         });
         this.currentGroup = response.data;
+        console.log(
+          `DEBUG: groupStore.fetchGroupDetails: 成功獲取群組 ${groupId} 的詳情。`
+        ); // 新增日誌
+        return true; // 成功時明確返回 true
       } catch (err) {
-        this.error =
-          err.response?.data?.error || "Failed to fetch group details.";
-        useNotificationStore().showNotification(this.error, "error");
-        console.error("Fetch group details error:", err);
-        this.currentGroup = null;
+        const errorMessage = err.response?.data?.error || "載入群組詳情失敗。";
+        this.error = errorMessage; // 設置錯誤，供 GroupDetails.vue 顯示
+        useNotificationStore().showNotification(errorMessage, "error"); // 也可以發送通知
+        console.error(
+          `DEBUG: groupStore.fetchGroupDetails: 獲取群組 ${groupId} 詳情錯誤:`,
+          err
+        ); // 新增錯誤日誌
+        router.push("/groups"); // 如果群組不存在或無權限，導向群組列表
+        return false; // 失敗時明確返回 false
       } finally {
         this.isLoading = false;
       }
