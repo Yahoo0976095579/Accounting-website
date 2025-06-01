@@ -204,6 +204,7 @@ export const useGroupStore = defineStore("group", {
     },
 
     // 新增：移除群組成員
+    // 修正：移除群組成員
     async removeMember(groupId, memberId) {
       this.isLoading = true; // 可能需要一個更細粒度的 loading 狀態，例如 isRemovingMember
       this.error = null;
@@ -215,15 +216,12 @@ export const useGroupStore = defineStore("group", {
             headers: this.getAuthHeaders(),
           }
         );
-        // 成功後刷新當前群組的成員列表
-        if (this.currentGroup && this.currentGroup.id === groupId) {
-          this.currentGroup.members = this.currentGroup.members.filter(
-            (member) => member.id !== memberId
-          );
-          // 同步更新成員計數
-          this.currentGroup.member_count = this.currentGroup.members.length;
-        }
-        // 也可以考慮重新調用 fetchGroupDetails(groupId) 來獲取最新數據
+
+        // === 修正點：成功後重新獲取群組詳情以更新畫面 ===
+        await this.fetchGroupDetails(groupId);
+        // 這將會重新從後端載入最新的成員列表，確保畫面一致
+        // ===============================================
+
         notificationStore.showNotification("成員已成功移除！", "success");
         return true;
       } catch (err) {

@@ -474,6 +474,8 @@ def update_group(group_id):
         db.session.rollback()
         return jsonify({"error": "群組更新失敗: " + str(e)}), 500
 
+# app.py (在 delete_group 函數中)
+
 @app.route('/api/groups/<int:group_id>', methods=['DELETE'])
 @jwt_required()
 def delete_group(group_id):
@@ -482,22 +484,40 @@ def delete_group(group_id):
     if not group_member:
         return jsonify({"error": "群組未找到或您無權刪除該群組"}), 403 # Forbidden
 
-    group = group_member.group
+    group = Group.query.get(group_id) # 直接查詢群組，確保關係是 lazy 加載的
+    if not group: # 再次檢查群組是否存在 (雖然前面 GroupMember 檢查過了，但這是更直接的)
+        return jsonify({"error": "群組未找到"}), 404
 
-    # 檢查是否有成員或交易關聯
-    if group.group_members.count() > 1: # 如果還有其他成員（除了創建者自己）
-        return jsonify({"error": "群組中仍有其他成員，無法直接刪除"}), 400
-    if GroupTransaction.query.filter_by(group_id=group_id).first():
-        return jsonify({"error": "群組中仍有交易記錄，無法直接刪除"}), 400
+    # === 修正點：使用明確的 Query 來獲取成員數量 ===
+    # 檢查是否有其他成員（除了創建者自己）
+    # 因為創建者也是成員，如果只有他自己，成員數量就是 1。
+    # 所以如果成員數量大於 1，就表示還有其他成員。
+    active_member_count = GroupMember.query.filter_by(
+        group_id=group_id,
+        status='accepted'
+    ).count()
+
+    if active_member_count > 1:
+        return jsonify({"error": "群組中仍有其他活躍成員，無法直接刪除。請先移除所有其他成員。"}), 400
+
+    # === 修正點：檢查是否有交易記錄 ===
+    group_transaction_count = GroupTransaction.query.filter_by(group_id=group_id).count()
+    if group_transaction_count > 0:
+        return jsonify({"error": "群組中仍有交易記錄，無法直接刪除。請先清空所有交易。"}), 400
 
     try:
-        # 刪除所有相關的 GroupMember 記錄 (包括創建者自己的)
+        # 手動刪除所有相關的 GroupMember 和 GroupTransaction 記錄
+        # 這是為了確保數據庫層面的完整性，即使沒有設置 cascade='all, delete-orphan'
         GroupMember.query.filter_by(group_id=group_id).delete()
-        db.session.delete(group)
+        GroupTransaction.query.filter_by(group_id=group_id).delete()
+        # 如果你還有 Invitation 或其他與 Group 直接相關的表，也需要在這裡刪除
+
+        db.session.delete(group) # 最後刪除群組本身
         db.session.commit()
         return jsonify({"message": "群組刪除成功"}), 204
     except Exception as e:
         db.session.rollback()
+        print(f"Error deleting group {group_id}: {e}")
         return jsonify({"error": "群組刪除失敗: " + str(e)}), 500
 
 @app.route('/api/groups/<int:group_id>/leave', methods=['POST'])
@@ -616,6 +636,8 @@ def reject_invitation(invitation_id):
 #移除成員
 # app.py (在群組管理 API 區塊內，例如在 invite_member 附近)
 
+# app.py (在群組管理 API 區塊內)
+
 @app.route('/api/groups/<int:group_id>/members/<int:member_id>', methods=['DELETE'])
 @jwt_required()
 def remove_group_member(group_id, member_id):
@@ -641,26 +663,23 @@ def remove_group_member(group_id, member_id):
     if not member_to_remove:
         return jsonify({"error": "成員未找到或不是該群組的活躍成員"}), 404
 
-    # 3. 不允許管理員移除自己 (如果他是群組的唯一管理員)
+    # 3. 不允許管理員移除自己 (這個 API 是用於移除他人，自己退出有專門的 leave 接口)
     if member_to_remove.user_id == current_user_id:
-        # 如果是唯一管理員，且群組還有其他成員，則不允許移除自己
-        if member_to_remove.role == 'admin' and \
-           GroupMember.query.filter_by(group_id=group_id, role='admin', status='accepted').count() == 1 and \
-           GroupMember.query.filter_by(group_id=group_id, status='accepted').count() > 1:
-            return jsonify({"error": "您是該群組的唯一管理員，請先轉移管理權限再退出。"}), 400
-        # 允許自己退出 (leave group)，這個在 /api/groups/<int:group_id>/leave 處理更合適
-        # 這個 API 應該只用於管理員移除他人
         return jsonify({"error": "無法透過此介面移除自己。請使用 '退出群組' 功能。"}), 400
 
-
-    # 4. 不允許移除群組的唯一管理員 (如果群組還有其他非管理員成員)
-    # 判斷是否只剩一個管理員，且這個管理員就是 `member_to_remove`
-    if member_to_remove.role == 'admin':
-        active_admins = GroupMember.query.filter_by(group_id=group_id, role='admin', status='accepted').count()
-        if active_admins == 1:
-            # 如果被移除的是唯一的管理員，且該群組還有其他成員
-            if GroupMember.query.filter_by(group_id=group_id, status='accepted').count() > 1:
-                return jsonify({"error": "無法移除群組的唯一管理員，請先指定其他管理員。"}), 400
+    # 4. 不允許移除群組的唯一管理員 (如果群組還有其他非管理員成員存在)
+    if member_to_remove.role == 'admin': # 如果要移除的是管理員
+        active_admins_count = GroupMember.query.filter_by(
+            group_id=group_id,
+            role='admin',
+            status='accepted'
+        ).count()
+        
+        # 如果當前管理員是唯一的管理員 (active_admins_count == 1)
+        # 且群組中還有其他非管理員成員 (GroupMember.query.filter_by(group_id=group_id, status='accepted').count() > 1)
+        # 則不允許移除這個唯一的管理員
+        if active_admins_count == 1 and GroupMember.query.filter_by(group_id=group_id, status='accepted').count() > 1:
+             return jsonify({"error": "無法移除群組的唯一管理員，請先指定其他管理員。"}), 400
 
     try:
         db.session.delete(member_to_remove)
