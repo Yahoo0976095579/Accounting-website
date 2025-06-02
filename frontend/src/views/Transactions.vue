@@ -69,6 +69,7 @@
             <option value="expense">支出</option>
           </select>
         </div>
+
         <!-- 類別篩選 -->
         <div>
           <label
@@ -82,7 +83,6 @@
             class="w-full shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
           >
             <option value="">所有類別</option>
-            <!-- 修正點：v-for 迭代 filteredCategories -->
             <option
               v-for="category in filteredCategories"
               :key="category.id"
@@ -100,6 +100,7 @@
             載入類別失敗: {{ categoryStore.error }}
           </p>
         </div>
+
         <!-- 日期範圍篩選 -->
         <div>
           <label
@@ -114,6 +115,7 @@
             class="w-full shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
           />
         </div>
+
         <div>
           <label
             for="endDate"
@@ -127,9 +129,9 @@
             class="w-full shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
           />
         </div>
+
         <!-- 搜索欄 -->
         <div class="col-span-2 md:col-span-1">
-          <!-- 讓搜索框在手機上獨佔兩欄，大螢幕正常 -->
           <label
             for="searchTerm"
             class="block text-gray-700 text-sm font-bold mb-2"
@@ -143,7 +145,7 @@
             class="w-full shadow appearance-none border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
           />
         </div>
-        <!-- 搜尋/重置按鈕 -->
+
         <!-- 搜尋/重置按鈕 -->
         <div class="col-span-full flex flex-row gap-2 pt-2">
           <button
