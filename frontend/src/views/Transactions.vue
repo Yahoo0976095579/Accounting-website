@@ -105,8 +105,8 @@
           <label class="block text-gray-700 text-sm font-bold mb-2"
             >日期區間:</label
           >
-          <div class="grid grid-cols-2 gap-4">
-            <div>
+          <div class="flex flex-col sm:flex-row gap-4">
+            <div class="flex-1">
               <label for="startDate" class="sr-only">從日期:</label>
               <input
                 type="date"
@@ -117,7 +117,7 @@
               />
             </div>
 
-            <div>
+            <div class="flex-1">
               <label for="endDate" class="sr-only">到日期:</label>
               <input
                 type="date"
