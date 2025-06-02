@@ -147,32 +147,37 @@
             </select>
           </div>
 
-          <div class="col-span-full">
-            <label class="block text-gray-700 text-sm font-bold mb-2"
-              >日期區間:</label
-            >
-          </div>
+          <!-- 日期區間篩選：從 + 到，放在一列 -->
+          <div class="col-span-2 flex flex-col md:flex-row gap-4">
+            <!-- 從日期 -->
+            <div class="flex-1">
+              <label
+                for="startDate"
+                class="block text-gray-700 text-sm font-bold mb-2"
+                >從日期:</label
+              >
+              <input
+                type="date"
+                id="startDate"
+                v-model="filters.start_date"
+                class="w-full shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
+              />
+            </div>
 
-          <div>
-            <label for="startDate" class="sr-only">從日期:</label>
-            <input
-              type="date"
-              id="startDate"
-              v-model="chartFilters.start_date"
-              class="w-full shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
-              aria-label="從日期"
-            />
-          </div>
-
-          <div>
-            <label for="endDate" class="sr-only">到日期:</label>
-            <input
-              type="date"
-              id="endDate"
-              v-model="chartFilters.end_date"
-              class="w-full shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
-              aria-label="到日期"
-            />
+            <!-- 到日期 -->
+            <div class="flex-1">
+              <label
+                for="endDate"
+                class="block text-gray-700 text-sm font-bold mb-2"
+                >到日期:</label
+              >
+              <input
+                type="date"
+                id="endDate"
+                v-model="filters.end_date"
+                class="w-full shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
+              />
+            </div>
           </div>
         </div>
 
