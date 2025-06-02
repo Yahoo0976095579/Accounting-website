@@ -155,7 +155,6 @@ export const useAuthStore = defineStore("auth", {
       }
     },
 
-    // ... (其他更新用戶資訊的動作不變)
     async updateUsername(newUsername) {
       this.isLoading = true;
       this.error = null;

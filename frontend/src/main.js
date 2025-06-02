@@ -15,3 +15,4 @@ app.use(router);
 app.use(pinia);
 setupAxiosInterceptors();
 app.mount("#app");
+//新增
