@@ -147,7 +147,7 @@
             </select>
           </div>
 
-          <!-- 從日期 -->
+          <!-- 從日期最新 -->
           <div>
             <label
               for="chartStartDate"
