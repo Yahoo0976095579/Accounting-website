@@ -93,6 +93,7 @@ export const useAuthStore = defineStore("auth", {
       }
     },
 
+    // src/stores/authStore.js
     async logout() {
       this.isLoading = true;
       this.error = null;
@@ -107,7 +108,7 @@ export const useAuthStore = defineStore("auth", {
         this.user = null;
         localStorage.removeItem("user");
         localStorage.removeItem("access_token");
-        router.push("/login");
+        router.push("/login"); // <-- 重定向在這裡
         this.isLoading = false;
       }
     },
