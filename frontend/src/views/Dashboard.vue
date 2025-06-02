@@ -147,36 +147,39 @@
             </select>
           </div>
 
-          <!-- 從日期最新 -->
-          <div>
-            <label
-              for="chartStartDate"
-              class="block text-gray-700 text-sm font-bold mb-2"
-            >
-              從日期:
-            </label>
-            <input
-              type="date"
-              id="chartStartDate"
-              v-model="chartFilters.start_date"
-              class="w-full shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
-            />
-          </div>
+          <!-- 從日期 + 到日期：在同一排 -->
+          <div class="col-span-2 flex flex-col sm:flex-row gap-4">
+            <!-- 從日期 -->
+            <div class="flex-1">
+              <label
+                for="chartStartDate"
+                class="block text-gray-700 text-sm font-bold mb-2"
+              >
+                從日期:
+              </label>
+              <input
+                type="date"
+                id="chartStartDate"
+                v-model="chartFilters.start_date"
+                class="w-full shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
+              />
+            </div>
 
-          <!-- 到日期 -->
-          <div>
-            <label
-              for="chartEndDate"
-              class="block text-gray-700 text-sm font-bold mb-2"
-            >
-              到日期:
-            </label>
-            <input
-              type="date"
-              id="chartEndDate"
-              v-model="chartFilters.end_date"
-              class="w-full shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
-            />
+            <!-- 到日期 -->
+            <div class="flex-1">
+              <label
+                for="chartEndDate"
+                class="block text-gray-700 text-sm font-bold mb-2"
+              >
+                到日期:
+              </label>
+              <input
+                type="date"
+                id="chartEndDate"
+                v-model="chartFilters.end_date"
+                class="w-full shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
+              />
+            </div>
           </div>
         </div>
 
