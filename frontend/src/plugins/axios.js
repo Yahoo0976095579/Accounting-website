@@ -11,22 +11,31 @@ export function setupAxiosInterceptors() {
       const originalRequest = error.config;
 
       // 判斷是否為 401 Unauthorized 錯誤
-      // 並且不是登入/註冊接口本身，避免登入失敗時也觸發重定向
-      // 並且不是 /logout 接口本身 (避免循環或不必要的攔截)
-      // 並且沒有被重試過 (防止無限循環重定向或重試)
+      // 並且不是登入/註冊接口本身
+      // 並且沒有被重試過 (防止無限循環)
       if (
         error.response?.status === 401 &&
         !originalRequest.url.includes("/login") &&
         !originalRequest.url.includes("/register") &&
-        !originalRequest.url.includes("/logout") && // === 新增：排除 /logout 接口 ===
         !originalRequest._retry
       ) {
-        originalRequest._retry = true;
-
         const authStore = useAuthStore();
+
+        // === 修正點：檢查 isLoggingOut 旗標 ===
+        if (authStore.isLoggingOut) {
+          console.log(
+            "Interceptor: Already in logout process, ignoring duplicate 401."
+          );
+          return Promise.reject(error); // 阻止錯誤傳播，但不觸發新的登出
+        }
+        // ===================================
+
+        originalRequest._retry = true; // 標記此請求已被攔截器處理過
+
         const notificationStore = useNotificationStore();
 
         if (authStore.isAuthenticated) {
+          // 再次檢查 isAuthenticated，確保是真的會話過期
           console.warn(
             "Axios Interceptor: Received 401 Unauthorized. Session expired, performing automatic logout."
           );
@@ -35,12 +44,11 @@ export function setupAxiosInterceptors() {
             "warning"
           );
 
-          // 直接調用 authStore.logout()，它會處理清除 token 和重定向
-          await authStore.logout(); // 等待登出完成，包括重定向
+          await authStore.logout(); // 觸發登出流程 (現在有了 isLoggingOut 旗標保護)
 
-          // 返回一個空的 Promise.reject，這樣錯誤就不會傳播到原始請求的 catch 塊，
+          // 返回一個被拒絕的 Promise，阻止錯誤傳播到原始請求的 catch 塊，
           // 並且重定向已經被處理。
-          return Promise.reject(); // === 修正：返回 Promise.reject() ===
+          return Promise.reject(error);
         }
       }
 

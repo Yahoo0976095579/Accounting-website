@@ -9,6 +9,7 @@ export const useAuthStore = defineStore("auth", {
     user: JSON.parse(localStorage.getItem("user")) || null,
     isLoading: false,
     error: null,
+    isLoggingOut: false, // === 新增：登出中旗標 ===
   }),
   getters: {
     isAuthenticated: (state) => !!state.user,
@@ -95,24 +96,45 @@ export const useAuthStore = defineStore("auth", {
 
     // src/stores/authStore.js
     async logout() {
+      if (this.isLoggingOut) {
+        // 如果已經在登出中，直接返回，避免重複執行
+        console.warn("Already logging out, preventing duplicate logout calls.");
+        return;
+      }
+      this.isLoggingOut = true; // 設置登出中旗標
+
       this.isLoading = true;
       this.error = null;
       try {
-        await axios.get(`${API_BASE_URL}/logout`, {
-          headers: this.getAuthHeaders(),
-        });
+        // 發送 logout 請求，但這裡不 await，讓它非同步執行，
+        // 即使失敗也快速進入 finally 塊進行本地清理和重定向。
+        // 或者，可以選擇完全移除這個後端 logout 請求，
+        // 因為 JWT 的關鍵在於前端清除 token。
+        axios
+          .get(`${API_BASE_URL}/logout`, {
+            headers: this.getAuthHeaders(),
+          })
+          .catch((err) => {
+            // 捕獲錯誤，但不阻止 finally 塊執行
+            console.error(
+              "Logout API call failed, but proceeding with local cleanup:",
+              err
+            );
+          });
       } catch (err) {
-        this.error = err.response?.data?.error || "Logout failed.";
-        console.error("Logout error:", err);
+        // 這裡的 catch 塊可能不會被執行，因為我們上面沒有 await axios.get
+        this.error = err.response?.data?.error || "Logout failed locally.";
+        console.error("Logout error (local catch):", err);
       } finally {
         this.user = null;
         localStorage.removeItem("user");
         localStorage.removeItem("access_token");
-        router.push("/login"); // <-- 重定向在這裡
+        console.log("Performing local logout cleanup and redirect.");
+        router.push("/login"); // 確保重定向
         this.isLoading = false;
+        this.isLoggingOut = false; // 清除登出中旗標
       }
     },
-
     async fetchCurrentUser() {
       this.isLoading = true;
       this.error = null;
