@@ -118,15 +118,16 @@
 
       <!-- filepath: c:\Users\yahoo\OneDrive\Desktop\python程式設計\記帳網站\frontend\src\views\Dashboard.vue -->
       <div
-        class="mb-8 p-4 sm:p-6 bg-white rounded-lg shadow-md border border-blue-100"
+        class="mb-8 p-4 sm:p-6 bg-white rounded-lg shadow-md border border-blue-100 max-w-5xl mx-auto"
       >
         <h3 class="text-xl sm:text-2xl font-bold text-gray-700 mb-4">
           數據篩選
         </h3>
 
-        <!-- 篩選器輸入組 -->
-        <!-- 使用 grid 佈局，手機上至少兩列，中等螢幕三列，大螢幕更多 -->
-        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
+        <div
+          class="grid gap-4 mb-6"
+          style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr))"
+        >
           <!-- 區間篩選 -->
           <div>
             <label
@@ -145,7 +146,7 @@
               <option value="month">按月</option>
             </select>
           </div>
-          <div></div>
+
           <!-- 從日期 -->
           <div>
             <label
@@ -177,23 +178,22 @@
               class="w-full shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
             />
           </div>
+        </div>
 
-          <!-- 搜尋/重置按鈕 -->
-          <!-- 讓按鈕組佔據底部所有可用空間，並左右均分 -->
-          <div class="col-span-full flex flex-row gap-2 pt-2">
-            <button
-              @click="loadDashboardData"
-              class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm transition duration-200 ease-in-out flex-1 md:flex-none md:w-auto md:max-w-[120px]"
-            >
-              搜尋
-            </button>
-            <button
-              @click="resetChartFilters"
-              class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm transition duration-200 ease-in-out flex-1 md:flex-none md:w-auto md:max-w-[120px]"
-            >
-              重置
-            </button>
-          </div>
+        <!-- 按鈕組 -->
+        <div class="flex flex-col sm:flex-row sm:justify-end gap-2 pt-2">
+          <button
+            @click="loadDashboardData"
+            class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm transition duration-200 ease-in-out"
+          >
+            搜尋
+          </button>
+          <button
+            @click="resetChartFilters"
+            class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline text-sm transition duration-200 ease-in-out"
+          >
+            重置
+          </button>
         </div>
       </div>
 
