@@ -158,7 +158,7 @@
             <input
               type="date"
               id="startDate"
-              v-model="filters.start_date"
+              v-model="chartFilters.start_date"
               class="w-full shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
               aria-label="從日期"
             />
@@ -169,7 +169,7 @@
             <input
               type="date"
               id="endDate"
-              v-model="filters.end_date"
+              v-model="chartFilters.end_date"
               class="w-full shadow border rounded py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm"
               aria-label="到日期"
             />
