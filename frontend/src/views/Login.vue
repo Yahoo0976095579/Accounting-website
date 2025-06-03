@@ -52,8 +52,8 @@
           </router-link>
         </div>
       </form>
+      <p class="text-center">測試帳號:test 密碼:test</p>
     </div>
-    <p class="text-center">測試帳號:test 密碼:test</p>
   </div>
 </template>
 
