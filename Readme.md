@@ -217,5 +217,4 @@ npm run dev
 
 ## 設定
 
-![畫面預覽](./ReadMeImg/設定.png)
 ![畫面預覽(響應式)](./ReadMeImg/響應式設定.png)
