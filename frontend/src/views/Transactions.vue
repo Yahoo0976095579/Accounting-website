@@ -509,6 +509,7 @@ const handleTransactionSaved = async () => {
     transactionStore.currentPage,
     10
   );
+  await transactionStore.fetchSummary(transactionStore.currentFilters);
   closeTransactionModal();
 };
 
