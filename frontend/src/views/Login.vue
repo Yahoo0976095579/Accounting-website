@@ -5,7 +5,7 @@
       <h1 class="text-2xl font-bold mb-6 text-center">登入</h1>
       <p class="text-center text-gray-600">測試帳號:test 密碼:test</p>
       <p class="text-center text-gray-600">
-        Render會有冷啟動時間，再麻煩稍等一下後端請求
+        後端會有冷啟動時間，稍等一下後端請求
       </p>
       <form @submit.prevent="handleLogin">
         <div class="mb-4">
