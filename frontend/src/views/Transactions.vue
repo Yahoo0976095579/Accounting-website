@@ -521,7 +521,19 @@ const confirmDeleteTransaction = (id) => {
 const handleDeleteConfirmed = async () => {
   showConfirmDeleteModal.value = false;
   if (transactionToDeleteId.value) {
-    await transactionStore.deleteTransaction(transactionToDeleteId.value);
+    // 1. 執行刪除操作
+    const success = await transactionStore.deleteTransaction(
+      transactionToDeleteId.value
+    );
+    if (success) {
+      await transactionStore.fetchTransactions(
+        transactionStore.currentFilters,
+        transactionStore.currentPage,
+        10
+      );
+
+      await transactionStore.fetchSummary(transactionStore.currentFilters);
+    }
     transactionToDeleteId.value = null;
   }
 };
