@@ -59,55 +59,50 @@
 
 ## ⚙️ 安裝與啟動
 
-### 1️⃣ 後端 (Flask)
+先將 github 專案 clone 下來再推送到自己的 github 專案。
+(對部屬較方便)
 
-````bash
-# 進入後端專案資料夾
-cd backend
+### 1️⃣ 後端 (Flask)部屬 render
 
-# 建立虛擬環境
-python -m venv venv
+註冊並登入 Render
+https://render.com/
 
-# 啟動虛擬環境
-# Windows:
-.\venv\Scripts\activate
-# macOS/Linux:
-source venv/bin/activate
+## 新增 web service 專案後選取對應 github。
 
-# 安裝相依套件
-pip install -r requirements.txt
+1.render 內部的 name 自取 。 2.語言選 python 3 。 3.分支選 main。
+4.Region 選新加坡
+5.Root Directory 選 backend
+6.Build Command 寫 pip install -r requirements.txt
+7.Instance Type 選 FREE
+8.Environment Variables 寫 DATABASE_URL
+9.Environment Variables value 寫 postgresql://accweb_y3ga_user:nfuMKgZoHO2T07GmajLWN2tbzftUfTR7@dpg-d0tf5vu3jp1c73ehgdo0-a.singapore-postgres.render.com/accweb_y3ga
 
+### 2️⃣ 資料庫(PostgreSQL) 部屬 render
 
-建立 `.env` 檔案，設定：
+註冊並登入 Render
+https://render.com/
 
-* `SECRET_KEY`：Flask 密鑰
-* `DATABASE_URL`：PostgreSQL URL（如連接 Render）
-* `JWT_SECRET_KEY`：JWT 簽名密鑰
+## 新增 Postgres 專案。
 
-```bash
-# 執行 Flask 伺服器
-python app.py
-````
+1.Name 自取
+2.Region 選新加坡
+3.Plan Options 選 FREE
 
----
+##render 後端就會連到 render 資料庫
 
-### 2️⃣ 前端 (Vue 3)
+### 前端 (Vue 3)部屬 vercel
 
-```bash
-# 進入前端專案資料夾
-cd frontend
+註冊並登入 Velcel
+https://vercel.com/
 
-# 安裝依賴
-npm install
+先將 github 專案 clone 下來再推送到自己的 github 專案。
+(對部屬較方便)
 
-# 運行開發伺服器
-npm run dev
-```
+1.建立專案 2.選擇對應的 github 專案
+3.Framework Preset 選 Vite
+4.Root Directory 選 frontend
 
-- 本地前端網址：[http://localhost:5173](http://localhost:5173)
-- 本地後端 API： [http://localhost:5000](http://localhost:5000)
-
----
+## 創立後就可以連到 render 後端
 
 ## 🔗 前後端互動邏輯
 
