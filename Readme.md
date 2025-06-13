@@ -69,13 +69,13 @@ https://render.com/
 
 ## 新增 web service 專案後選取對應 github。
 
-1.render 內部的 name 自取 。 2.語言選 python 3 。 3.分支選 main。
-4.Region 選新加坡
-5.Root Directory 選 backend
-6.Build Command 寫 pip install -r requirements.txt
-7.Instance Type 選 FREE
-8.Environment Variables 寫 DATABASE_URL
-9.Environment Variables value 寫 postgresql://accweb_y3ga_user:nfuMKgZoHO2T07GmajLWN2tbzftUfTR7@dpg-d0tf5vu3jp1c73ehgdo0-a.singapore-postgres.render.com/accweb_y3ga
+1.render 內部的 name 自取 <br> 2.語言選 python 3 <br> 3.分支選 main<br>
+4.Region 選新加坡<br>
+5.Root Directory 選 backend<br>
+6.Build Command 寫 pip install -r requirements.txt<br>
+7.Instance Type 選 FREE<br>
+8.Environment Variables 寫 DATABASE_URL<br>
+9.Environment Variables value 寫 postgresql://accweb_y3ga_user:nfuMKgZoHO2T07GmajLWN2tbzftUfTR7@dpg-d0tf5vu3jp1c73ehgdo0-a.singapore-postgres.render.com/accweb_y3ga<br>
 
 ### 2️⃣ 資料庫(PostgreSQL) 部屬 render
 
@@ -84,9 +84,9 @@ https://render.com/
 
 ## 新增 Postgres 專案。
 
-1.Name 自取
-2.Region 選新加坡
-3.Plan Options 選 FREE
+1.Name 自取<br>
+2.Region 選新加坡<br>
+3.Plan Options 選 FREE<br>
 
 ##render 後端就會連到 render 資料庫
 
