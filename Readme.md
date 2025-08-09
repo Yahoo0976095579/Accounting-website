@@ -87,15 +87,36 @@
 
 ### 交易紀錄
 
-![交易紀錄畫面](./ReadMeImg/交易紀錄.png)
-![響應式交易紀錄畫面](./ReadMeImg/響應式交易紀錄.png)
+<h3 align="center">交易紀錄畫面</h3>
+<p align="center">
+   <img src="./ReadMeImg/交易紀錄.png" alt="交易紀錄畫面" width="400px">
+</p>
+<br>
+<h3 align="center">響應式交易紀錄畫面</h3>
+<p align="center">
+   <img src="./ReadMeImg/響應式交易紀錄畫面.png" alt="響應式交易紀錄畫面" width="400px">
+</p>
 
 ### 類別管理
 
-![類別管理畫面](./ReadMeImg/類別管理.png)
-![響應式類別管理畫面](./ReadMeImg/響應式類別管理.png)
+<h3 align="center">類別管理畫面</h3>
+<p align="center">
+   <img src="./ReadMeImg/類別管理.png" alt="類別管理畫面" width="400px">
+</p>
+<br>
+<h3 align="center">響應式類別管理畫面</h3>
+<p align="center">
+   <img src="./ReadMeImg/響應式類別管理.png" alt="響應式類別管理畫面" width="400px">
+</p>
 
 ### 群組記帳
 
-![群組記帳畫面](./ReadMeImg/群組記帳.png)
-![響應式群組記帳畫面](./ReadMeImg/響應式群組記帳.png)
+<h3 align="center">群組記帳畫面</h3>
+<p align="center">
+   <img src="./ReadMeImg/群組記帳.png" alt="群組記帳畫面" width="400px">
+</p>
+<br>
+<h3 align="center">響應式群組記帳畫面</h3>
+<p align="center">
+   <img src="./ReadMeImg/響應式群組記帳.png" alt="響應式群組記帳畫面" width="400px">
+</p>
