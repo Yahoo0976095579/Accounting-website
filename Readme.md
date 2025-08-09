@@ -75,8 +75,15 @@
 
 ### 首頁
 
-![首頁畫面](./ReadMeImg/首頁.png)
-![響應式首頁畫面](./ReadMeImg/響應式設計首頁.png)
+<h3 align="center">首頁畫面</h3>
+<p align="center">
+   <img src="./ReadMeImg/首頁.png" alt="首頁畫面" width="400px">
+</p>
+<br>
+<h3 align="center">響應式首頁畫面</h3>
+<p align="center">
+   <img src="./ReadMeImg/響應式設計首頁.png" alt="響應式首頁畫面" width="400px">
+</p>
 
 ### 交易紀錄
 
