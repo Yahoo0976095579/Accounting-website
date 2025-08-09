@@ -94,7 +94,7 @@
 <br>
 <h3 align="center">響應式交易紀錄畫面</h3>
 <p align="center">
-   <img src="./ReadMeImg/響應式交易紀錄.png" alt="交易紀錄畫面" width="400px">
+   <img src="./ReadMeImg/響應式交易紀錄.png" alt="交易紀錄畫面" width="200px">
 </p>
 
 ### 類別管理
