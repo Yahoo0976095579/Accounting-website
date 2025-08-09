@@ -63,9 +63,11 @@
 
 ### 登入與註冊
 
-<div style="text-align: center;">
- <img src="./ReadMeImg/登入.png" alt="登入畫面" width="600px">
-</div>
+<h3 align="center">登入畫面</h3>
+<p align="center">
+   <img src="./ReadMeImg/登入.png" alt="登入畫面" width="600px">
+</p>
+
 ![註冊畫面](./ReadMeImg/註冊.png)
 
 ### 首頁
