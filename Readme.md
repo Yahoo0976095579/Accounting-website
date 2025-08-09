@@ -118,5 +118,5 @@
 <br>
 <h3 align="center">響應式群組記帳畫面</h3>
 <p align="center">
-   <img src="./ReadMeImg/響應式群組記帳.png" alt="響應式群組記帳畫面" width="400px">
+   <img src="./ReadMeImg/響應式群組記帳.png" alt="響應式群組記帳畫面" width="200px">
 </p>
