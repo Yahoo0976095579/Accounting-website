@@ -65,7 +65,7 @@
 
 <h3 align="center">登入畫面</h3>
 <p align="center">
-   <img src="./ReadMeImg/登入.png" alt="登入畫面" width="600px">
+   <img src="./ReadMeImg/登入.png" alt="登入畫面" width="400px">
 </p>
 
 ![註冊畫面](./ReadMeImg/註冊.png)
