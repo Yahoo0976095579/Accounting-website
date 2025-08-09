@@ -6,6 +6,13 @@
 
 🔗 **網站連結：** [https://yahoo0976095579.github.io/Accounting-website/](https://yahoo0976095579.github.io/Accounting-website/)
 
+## 🛠️ 使用技術
+
+- **前端**：Vue 3, Vite, Tailwind CSS
+- **後端**：Python, Flask
+- **資料庫**：PostgreSQL
+- **部署**：Vercel (前端), Render (後端 & 資料庫)
+
 ## ✨ 主要功能亮點
 
 ### 🔐 安全使用者認證
@@ -51,13 +58,6 @@
 - 使用 Tailwind CSS 打造簡潔美觀 UI
 
 ---
-
-## 🛠️ 使用技術
-
-- **前端**：Vue 3, Vite, Tailwind CSS
-- **後端**：Python, Flask
-- **資料庫**：PostgreSQL
-- **部署**：Vercel (前端), Render (後端 & 資料庫)
 
 ## 📸 畫面預覽
 
